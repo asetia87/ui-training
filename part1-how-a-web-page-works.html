@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07080d">
+<title>Part 1 · How a Web Page Works</title>
+<style>
+:root{
+  --bg:#07080d; --panel:#121622; --panel2:#181d2b; --line:#2a3145; --text:#eef1f8; --muted:#a3acc2; --dim:#5d6680;
+  --html:#ff7a45; --css:#4ea8ff; --js:#f7d046; --green:#3ddc97; --purple:#a78bfa; --pink:#ff5c8a; --cyan:#4ee6e0;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;overscroll-behavior:none}
+.app{position:fixed;inset:0;display:flex;justify-content:center;background:radial-gradient(1200px 600px at 50% -10%,#141a2e 0,transparent 60%),var(--bg)}
+.stage{position:relative;width:100%;max-width:460px;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:pan-y}
+@media (min-width:600px){.stage{height:min(100%,900px);margin:auto;border-radius:28px;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.6)}}
+.stage::before{content:"";position:absolute;inset:0;background:radial-gradient(500px 300px at 85% 10%,rgba(167,139,250,.10),transparent 70%),radial-gradient(500px 300px at 0% 90%,rgba(78,168,255,.08),transparent 70%);pointer-events:none}
+.top{position:absolute;left:0;right:0;top:0;z-index:5;padding:calc(env(safe-area-inset-top) + 10px) 14px 0}
+.segs{display:flex;gap:3px}
+.seg{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+.seg i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--css),var(--purple));transition:width .35s ease}
+.seg.done i{width:100%}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:12px;color:var(--muted);letter-spacing:.02em}
+.meta b{color:var(--text);font-weight:600}
+.card{position:absolute;inset:0;padding:calc(env(safe-area-inset-top) + 58px) 22px calc(env(safe-area-inset-bottom) + 64px);display:flex;flex-direction:column;opacity:0;visibility:hidden;transform:translateX(40px) scale(.98);transition:opacity .35s ease,transform .45s cubic-bezier(.2,.8,.2,1),visibility 0s linear .45s}
+.card.past{transform:translateX(-40px) scale(.98)}
+.card.active{opacity:1;visibility:visible;transform:none;transition:opacity .35s ease,transform .45s cubic-bezier(.2,.8,.2,1),visibility 0s}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--purple);margin-bottom:6px}
+.visual{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;margin:4px 0 14px}
+.visual svg{width:100%;height:100%;max-height:330px;overflow:visible}
+h1,h2{margin:0 0 10px;line-height:1.15;letter-spacing:-.02em}
+h1{font-size:clamp(30px,9vw,40px)}
+h2{font-size:clamp(22px,6.4vw,28px)}
+p{margin:0 0 8px;font-size:clamp(15px,4.2vw,17px);line-height:1.5;color:var(--muted)}
+p b,p strong{color:var(--text);font-weight:600}
+code,.mono{font-family:var(--mono);font-size:.9em}
+p code,.analogy code{background:#1b2131;border:1px solid var(--line);padding:1px 5px;border-radius:6px;color:#dfe5f5}
+.analogy{display:flex;gap:10px;align-items:flex-start;background:linear-gradient(135deg,rgba(78,168,255,.10),rgba(167,139,250,.10));border:1px solid rgba(120,140,255,.25);border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.45;color:#cfd6ea;margin-top:6px}
+.analogy::before{content:"⚙";font-size:15px;color:var(--css);line-height:1.3}
+.analogy b{color:#fff}
+.bottom{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:0 14px calc(env(safe-area-inset-bottom) + 12px)}
+.nav{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:rgba(18,22,34,.8);color:var(--text);font-size:20px;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(8px)}
+.nav:disabled{opacity:.3}
+.hint{font-size:12px;color:var(--dim)}
+svg *{transform-box:fill-box;transform-origin:center}
+.active .pop{animation:pop .55s cubic-bezier(.2,.9,.3,1.35) both;animation-delay:var(--d,0s)}
+.active .fade{animation:fade .6s ease both;animation-delay:var(--d,0s)}
+.active .rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0s)}
+.growx{transform-origin:left center}
+.active .growx{animation:growx .6s ease both;animation-delay:var(--d,0s)}
+.active .draw{stroke-dasharray:var(--len,300);animation:draw 1s ease both;animation-delay:var(--d,0s)}
+.flow{stroke-dasharray:4 6;animation:flow 1s linear infinite}
+.pulse{animation:pulse 2s ease-in-out infinite;animation-delay:var(--pd,0s)}
+@keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes growx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes draw{from{stroke-dashoffset:var(--len,300)}to{stroke-dashoffset:0}}
+@keyframes flow{to{stroke-dashoffset:-20}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes goR{0%{transform:translateX(0);opacity:0}10%,85%{opacity:1}100%{transform:translateX(60px);opacity:0}}
+@keyframes goL{0%{transform:translateX(0);opacity:0}10%,85%{opacity:1}100%{transform:translateX(-72px);opacity:0}}
+.req{animation:goR 2.4s ease-in-out infinite}
+.chunk{opacity:0;animation:goL 2.4s linear infinite;animation-delay:var(--d,0s)}
+.titlebadge{display:inline-flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 10px;margin-bottom:14px;align-self:flex-start;background:rgba(255,255,255,.03)}
+.titlebadge i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+.tapme{margin-top:6px;font-size:13px;color:var(--dim);animation:pulse 1.8s infinite}
+.grad{background:linear-gradient(90deg,var(--html),var(--js) 35%,var(--css) 70%,var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lay{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px}
+.lay-frame{width:100%;border:1px solid var(--line);border-radius:14px;padding:8px;background:#0d111b;display:flex;flex-direction:column;gap:6px;animation:resize 5s ease-in-out infinite alternate;position:relative}
+@keyframes resize{0%,15%{width:100%}85%,100%{width:52%}}
+.lay .b{border-radius:8px;font:600 11px/1 var(--mono);display:flex;align-items:center;justify-content:center;color:#0b0e16;padding:0 4px;overflow:hidden;white-space:nowrap}
+.lay .hdr{height:26px;background:var(--css)}
+.lay-row{display:flex;gap:6px}
+.lay .side{flex:0 0 26%;height:54px;background:var(--purple)}
+.lay .main{flex:1;height:54px;background:var(--green)}
+.lay-cards{display:flex;flex-wrap:wrap;gap:6px}
+.lay .c{flex:1 1 64px;height:30px;background:var(--js)}
+.ruler{font:12px var(--mono);color:var(--muted);display:flex;align-items:center;gap:8px}
+.ruler span{display:inline-block;height:2px;width:40px;background:linear-gradient(90deg,var(--pink),var(--js));border-radius:2px}
+.comp{position:relative;width:250px;height:230px;perspective:800px}
+.comp-in{position:absolute;inset:0;transform-style:preserve-3d}
+.layer{position:absolute;left:25px;top:30px;width:200px;height:170px;border-radius:14px;border:1px solid rgba(255,255,255,.18);transform-origin:center;animation:explode 6s ease-in-out infinite;--z:0px;display:flex;align-items:flex-end;justify-content:flex-end;padding:8px;font:600 10px var(--mono);color:rgba(255,255,255,.85)}
+.l1{--z:-60px;background-color:#151b30;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:16px 16px}
+.l2{--z:0px;background:rgba(78,168,255,.18)}
+.l2::before{content:"";position:absolute;left:66px;top:16px;width:112px;height:10px;border-radius:5px;background:rgba(255,255,255,.75);box-shadow:0 22px 0 rgba(255,255,255,.4),0 40px 0 rgba(255,255,255,.4),0 58px 0 rgba(255,255,255,.4),0 86px 0 -1px rgba(61,220,151,.7)}
+.l3{--z:60px;width:56px;background:rgba(167,139,250,.6);animation-name:explode3;align-items:flex-start;justify-content:center;padding-top:10px;text-align:center}
+@keyframes explode{0%,22%,100%{transform:rotateX(56deg) rotateZ(-38deg) translateZ(var(--z))}48%,80%{transform:rotateX(0) rotateZ(0) translateZ(0)}}
+@keyframes explode3{0%,22%,100%{transform:rotateX(56deg) rotateZ(-38deg) translateZ(var(--z))}48%{transform:translateX(-60px)}62%,80%{transform:translateX(0)}}
+.comp-tag{position:absolute;left:0;right:0;bottom:-6px;text-align:center;font:12px var(--mono);color:var(--muted)}
+.cost{width:100%;display:grid;grid-template-columns:92px repeat(5,1fr);gap:6px;font-size:10.5px;align-items:center}
+.cost .h{color:var(--dim);text-align:center;font-weight:600;letter-spacing:.02em}
+.cost .lbl{font:600 11px var(--mono);color:var(--text);line-height:1.3}
+.cost .lbl small{display:block;color:var(--dim);font-weight:400}
+.cell{height:30px;border-radius:8px;background:#151a27;border:1px dashed #262d40}
+.cell.on{background:var(--c);border:0;box-shadow:0 0 14px var(--c)}
+.active .cell.on{animation:light .45s ease both;animation-delay:var(--d,0s)}
+@keyframes light{from{opacity:.1;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+.costtag{grid-column:2/7;font-size:11px;color:var(--muted);text-align:right;margin-top:-2px}
+.qcode{font:13px/1.55 var(--mono);background:#0d111b;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0 14px;color:#cdd5ea;white-space:pre;overflow-x:auto}
+.qcode .k{color:var(--purple)}.qcode .s{color:var(--green)}.qcode .t{color:var(--html)}.qcode .c{color:var(--dim)}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);color:var(--text);font-size:15px;line-height:1.35;cursor:pointer;transition:transform .15s,border-color .2s,background .2s,opacity .2s}
+.opt:active{transform:scale(.98)}
+.opt:focus-visible{outline:2px solid var(--css)}
+.opt .l{flex:0 0 26px;height:26px;border-radius:8px;display:grid;place-items:center;background:#1e2436;font:700 12px var(--mono);color:var(--muted)}
+.opt code{font-size:13px}
+.opt.right{border-color:var(--green);background:rgba(61,220,151,.12)}
+.opt.right .l{background:var(--green);color:#06210f}
+.opt.wrong{border-color:var(--pink);background:rgba(255,92,138,.12);animation:shake .4s}
+.opt.wrong .l{background:var(--pink);color:#2a0612}
+.opts.done .opt:not(.right):not(.wrong){opacity:.45}
+@keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+.fb{margin-top:12px;font-size:14px;line-height:1.45;color:var(--muted);opacity:0;transform:translateY(8px);transition:.3s}
+.fb.show{opacity:1;transform:none}
+.fb b{color:var(--text)}
+.fb code{background:#1b2131;padding:1px 4px;border-radius:5px;color:#dfe5f5}
+.fb .tag{display:inline-block;font-weight:800;margin-right:4px}
+.qspacer{flex:1}
+.rx{width:100%;display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.rx-row{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.rx-box{flex:1;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:10px 8px;font:11px/1.4 var(--mono);color:#cdd5ea;min-height:62px;display:flex;flex-direction:column;justify-content:center}
+.rx-box .cap{font:700 9px system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.rx-arrow{color:var(--purple);font:700 13px var(--mono);flex:0 0 auto}
+.rx-f{flex:0 0 auto;background:linear-gradient(135deg,rgba(167,139,250,.25),rgba(78,168,255,.2));border:1px solid rgba(167,139,250,.5);border-radius:12px;padding:10px 7px;font:700 12px var(--mono)}
+.rx-ui{background:#f5f6fa;color:#141824;border-radius:14px;padding:9px 10px;font-size:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);min-height:62px}
+.rx-ui .bar{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px}
+.rx-ui .badge{background:#ff5c1a;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px}
+.rx-ui ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px}
+.rx-ui li{background:#e7e9f2;border-radius:6px;padding:3px 6px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flash{animation:flash .9s ease}
+@keyframes flash{0%{box-shadow:0 0 0 3px #3ddc97}100%{box-shadow:0 0 0 0 transparent}}
+.rx-note{font-size:12px;color:var(--dim);text-align:center}
+.btn{all:unset;cursor:pointer;align-self:center;padding:10px 18px;border-radius:999px;background:linear-gradient(135deg,var(--purple),var(--css));color:#fff;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(120,120,255,.35)}
+.btn:active{transform:scale(.96)}
+.btn.ghost{background:transparent;border:1px solid var(--line);box-shadow:none;color:var(--text);align-self:flex-start}
+.flowchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;width:100%}
+.chip{padding:7px 10px;border-radius:10px;font:700 12px var(--mono);color:#0b0e16;display:inline-block}
+.arr{color:var(--dim);font-size:12px}
+.take{list-style:none;padding:0;margin:14px 0 0;display:flex;flex-direction:column;gap:8px;width:100%}
+.take li{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13.5px;line-height:1.4;color:#cfd6ea}
+.take li b{color:#fff}
+.score{font-size:13px;color:var(--muted);margin-top:10px}
+.next-tags{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}
+.next-tags span{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted);font-family:var(--mono)}
+@media (max-height:700px){.visual svg{max-height:230px}.qcode{font-size:12px;padding:8px 10px;margin:4px 0 8px}.opt{padding:10px 12px}.analogy{font-size:13px;padding:8px 10px}p{font-size:15px}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+/* ---- lesson 1b additions ---- */
+.net{width:100%;background:#0d111b;border:1px solid var(--line);border-radius:12px;overflow:hidden;font:10.5px/1.2 var(--mono)}
+.net-h,.net-r{display:grid;grid-template-columns:1.35fr 46px 40px 1fr;gap:6px;align-items:center;padding:6px 9px}
+.net-h{color:var(--dim);font:700 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--line);background:#121622}
+.net-r{border-bottom:1px solid #161b28;color:#cdd5ea}
+.net-r:last-of-type{border-bottom:0}
+.net-r .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.net-r .t{color:var(--muted);font-size:9.5px}
+.net-r .z{color:var(--muted);text-align:right;font-size:9.5px}
+.net-r.dim{color:#59627a}.net-r.dim .t,.net-r.dim .z{color:#454d63}.net-r.dim .wf i{opacity:.35}
+.net-r.hl{background:rgba(78,168,255,.09);box-shadow:inset 3px 0 0 var(--css)}
+.wf{position:relative;height:9px;background:repeating-linear-gradient(90deg,transparent 0 19.6%,#1a2030 19.6% 20%)}
+.wf i{position:absolute;top:0;height:100%;border-radius:3px;left:var(--s);width:var(--w);background:var(--c);transform-origin:left center}
+.active .net-r{animation:rise .4s ease both;animation-delay:var(--d,0s)}
+.active .wf i{animation:growx .5s ease both;animation-delay:calc(var(--d,0s) + .15s)}
+.net-foot{padding:5px 9px;color:var(--dim);font-size:9px;display:flex;justify-content:space-between;border-top:1px solid var(--line);background:#121622}
+.netwrap{width:100%;display:flex;flex-direction:column;gap:10px}
+.cb{width:100%;font:11.5px/1.5 var(--mono);background:#0d111b;border:1px solid var(--line);border-radius:12px;color:#cdd5ea;overflow:hidden}
+.cb pre{margin:0;padding:9px 11px;white-space:pre;overflow-x:auto;font:inherit}
+.cb-h{display:flex;justify-content:space-between;align-items:center;padding:5px 11px;background:#121622;border-bottom:1px solid var(--line);font:700 9px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.cb-h .tagc{font:700 9.5px var(--mono);letter-spacing:0;text-transform:none;padding:2px 7px;border-radius:999px}
+.k{color:var(--purple)}.s{color:var(--green)}.t{color:var(--html)}.c{color:var(--dim)}.y{color:var(--js)}.bl{color:var(--css)}
+.mk{background:rgba(247,208,70,.18);color:var(--js);border-radius:4px;padding:0 2px}
+.stack{width:100%;display:flex;flex-direction:column;gap:8px}
+.down{align-self:center;color:var(--purple);font:700 13px var(--mono);line-height:1}
+/* phone mock */
+.phone{width:178px;height:300px;border-radius:26px;border:2px solid #2a3145;background:#0b0e16;padding:12px 10px;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.5);flex:0 0 auto;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.url{font:10px var(--mono);background:#181d2b;border-radius:8px;padding:6px 8px;color:var(--muted);white-space:nowrap;overflow:hidden}
+.url b{color:var(--text);font-weight:600}
+.pg{flex:1;border-radius:12px;background:#f3f5fa;padding:10px 9px;display:flex;flex-direction:column;gap:7px;color:#141824;font-size:11px;overflow:hidden;position:relative}
+.pg.blank{background:#fff}
+.pg .ttl{font-weight:800;font-size:12.5px;display:flex;justify-content:space-between;align-items:center}
+.sk{height:30px;border-radius:8px;background:linear-gradient(90deg,#e1e5ee 0,#f0f2f7 40%,#e1e5ee 80%);background-size:250% 100%;animation:shimmer 1.3s linear infinite}
+.sk.sm{height:12px;width:60%}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:-150% 0}}
+.prow{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e3e6ee;border-radius:8px;padding:7px 8px;font-size:10.5px;font-weight:600;color:#141824;cursor:pointer}
+.prow span{font-weight:500;font-size:9px;color:#fff;background:#3ddc97;border-radius:999px;padding:1px 6px}
+.prow span.pl{background:#f7a046}
+.prow.tapme2{box-shadow:0 0 0 0 rgba(255,92,26,.6);animation:ring 1.6s infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,92,26,.55)}70%{box-shadow:0 0 0 8px rgba(255,92,26,0)}100%{box-shadow:0 0 0 0 rgba(255,92,26,0)}}
+.dom{font:10.5px/1.55 var(--mono);color:#cdd5ea;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:10px;flex:1;min-width:0;white-space:pre;overflow:hidden}
+.row2{display:flex;gap:12px;align-items:center;width:100%;justify-content:center}
+.swap-a{animation:none}
+.active .later{animation:fade .5s ease both;animation-delay:var(--d,1.5s)}
+.active .gone{animation:gone .4s ease both;animation-delay:var(--d,1.5s)}
+@keyframes gone{to{opacity:0;height:0;margin:0;padding:0}}
+/* comparison table */
+.vs{width:100%;display:grid;grid-template-columns:76px 1fr 1fr;gap:5px;font-size:12px;line-height:1.3}
+.vs div{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px 8px;color:#cfd6ea}
+.vs .vh{font-weight:800;text-align:center;border:0}
+.vs .vh.code{background:rgba(247,208,70,.14);color:var(--js)}
+.vs .vh.data{background:rgba(61,220,151,.14);color:var(--green)}
+.vs .vl{background:transparent;border:0;color:var(--dim);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;padding:0}
+.trio{width:100%;display:flex;flex-direction:column;gap:7px}
+.trio .cb pre{padding:6px 10px;font-size:10.5px}
+.find{font-size:12px;color:var(--muted);text-align:center}
+.reload{display:inline-block;font:700 10px var(--mono);padding:3px 8px;border-radius:999px;background:rgba(61,220,151,.15);color:var(--green);border:1px solid rgba(61,220,151,.4)}
+.backb{all:unset;cursor:pointer;font-size:10px;color:#4a57c9;font-weight:700}
+.detail .big{font-size:13px;font-weight:800}
+.kv{display:flex;justify-content:space-between;font-size:10px;background:#fff;border-radius:6px;padding:5px 7px;border:1px solid #e3e6ee}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);justify-content:center}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<style>
+.raw{background:#fff;color:#000;font-family:"Times New Roman",serif;padding:8px 10px;border-radius:6px;width:100%}
+.raw h3{margin:0 0 4px;font-size:17px}.raw p{margin:0 0 6px;font-size:13px;color:#000}
+.pc{background:#fff;color:#141824;border-radius:14px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.4);width:100%;font-family:system-ui;transition:.3s}
+.pc h3{margin:0 0 4px;font-size:15px}.pc p{margin:0 0 10px;font-size:12px;color:#5b6378}
+.pc .st{display:inline-block;font-size:10px;font-weight:700;background:#fff1e6;color:#ff5c1a;border-radius:999px;padding:2px 8px;margin-bottom:6px}
+.pc button{all:unset;cursor:pointer;background:#ff5c1a;color:#fff;font-weight:700;font-size:12px;border-radius:8px;padding:6px 12px}
+.pc.done{opacity:.75}.pc.done .st{background:#e3f9ef;color:#1a9e66}.pc.done h3{text-decoration:line-through}.pc.done button{background:#3ddc97}
+.sbs{display:flex;flex-direction:column;gap:10px;width:100%}
+.demo{width:100%;display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.tg{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.tg button{all:unset;cursor:pointer;font:600 11px var(--mono);padding:6px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--panel)}
+.tg button.on{background:rgba(78,168,255,.18);border-color:var(--css);color:#fff}
+.flexbox{display:flex;gap:6px;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:8px;height:120px;transition:.3s}
+.flexbox div,.gridbox div{background:var(--purple);border-radius:7px;color:#160a33;font:700 11px var(--mono);display:grid;place-items:center;min-width:40px;min-height:30px;transition:.3s}
+.gridbox{display:grid;gap:6px;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:8px;grid-template-columns:repeat(3,1fr);transition:.3s}
+.gridbox div{background:var(--cyan);color:#062220;height:44px}
+.bm{position:relative;width:100%;display:grid;place-items:center;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:14px 8px}
+.bm-m{border:2px dashed var(--html);border-radius:10px;transition:.3s;padding:var(--m,16px)}
+.bm-b{border:var(--b,4px) solid var(--js);border-radius:8px;transition:.3s}
+.bm-p{background:rgba(61,220,151,.18);padding:var(--p,14px);transition:.3s}
+.bm-c{background:var(--css);color:#00122a;font:700 11px var(--mono);padding:10px 16px;border-radius:4px}
+.tree{font:12px/1.7 var(--mono);color:#cdd5ea;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:10px 12px;white-space:pre;min-height:120px}
+.tree .new{color:var(--green);animation:pop .5s both}
+.tree .sel{background:rgba(247,208,70,.2);color:var(--js);border-radius:4px}
+.mini{background:#fff;color:#141824;border-radius:12px;padding:10px;font:13px system-ui;min-height:60px}
+.mini li{margin:2px 0}
+.lab textarea{width:100%;height:190px;background:#0d111b;color:#cdd5ea;border:1px solid var(--line);border-radius:12px;font:10.5px/1.45 var(--mono);padding:8px;resize:none;user-select:text;-webkit-user-select:text}
+.lab iframe{width:100%;height:150px;border:0;border-radius:12px;background:#fff}
+.log{font:11px/1.6 var(--mono);background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-height:96px;color:#cdd5ea}
+.log div{animation:rise .3s both}
+.sect h1{font-size:clamp(34px,10vw,46px)}
+.sect .num{font:800 90px/1 system-ui;background:linear-gradient(135deg,var(--css),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent;opacity:.9}
+</style>
+<div class="app">
+<main class="stage" id="stage">
+  <div class="top">
+    <div class="segs" id="segs"></div>
+    <div class="meta"><span><b>Part 1</b> · How a web page works</span><a href="index.html" style="color:var(--muted);text-decoration:none;margin-left:auto;margin-right:10px">⌂ home</a><span id="count" aria-live="polite">1 / 30</span></div>
+  </div>
+
+  <!-- S1 TITLE -->
+  <section class="card sect">
+    <div class="visual"><div class="num pop">1</div></div>
+    <div class="titlebadge"><i></i>~12 min · 30 cards · 5 sections · 5 quizzes</div>
+    <div class="kicker">Section 1 of 5</div>
+    <h1>Three languages, <span class="grad">three jobs</span></h1>
+    <p>No frameworks yet. We'll build one Procore-style <b>Project card</b> in three layers: <span class="hl-html">HTML</span> for structure, <span class="hl-css">CSS</span> for looks, <span class="hl-js">JS</span> for behavior.</p>
+    <div class="tapme">Tap the right side or swipe left →</div>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Layer 1 · HTML = structure &amp; meaning</div>
+    <div class="visual"><div class="sbs">
+      <div class="cb rise"><div class="cb-h">project-card.html</div><pre><span class="t">&lt;article</span> class=<span class="s">"card"</span><span class="t">&gt;</span>
+  <span class="t">&lt;span</span> class=<span class="s">"st"</span><span class="t">&gt;</span>Open<span class="t">&lt;/span&gt;</span>
+  <span class="t">&lt;h3&gt;</span>Riverside Tower<span class="t">&lt;/h3&gt;</span>
+  <span class="t">&lt;p&gt;</span>Concrete pour on Level 4<span class="t">&lt;/p&gt;</span>
+  <span class="t">&lt;button&gt;</span>Mark done<span class="t">&lt;/button&gt;</span>
+<span class="t">&lt;/article&gt;</span></pre></div>
+      <div class="down">↓ browser renders</div>
+      <div class="raw pop" style="--d:.5s"><span>Open</span><h3>Riverside Tower</h3><p>Concrete pour on Level 4</p><button tabindex="-1">Mark done</button></div>
+    </div></div>
+    <h2>HTML says <i>what things are</i></h2>
+    <p>Tags label content: this is an article, a heading, a button. With no styling, the browser uses ugly defaults, but the meaning and structure are already there.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Layer 2 · CSS = presentation</div>
+    <div class="visual"><div class="sbs">
+      <div class="cb rise"><div class="cb-h">styles.css</div><pre><span class="k">.card</span>   { background: white; border-radius: 14px;
+          padding: 12px 14px; box-shadow: …; }
+<span class="k">.st</span>     { color: #ff5c1a; border-radius: 999px; }
+<span class="k">button</span>  { background: #ff5c1a; color: white; }</pre></div>
+      <div class="down">↓ same HTML, now styled</div>
+      <div class="pc pop" style="--d:.5s"><span class="st">Open</span><h3>Riverside Tower</h3><p>Concrete pour on Level 4</p><button tabindex="-1">Mark done</button></div>
+    </div></div>
+    <h2>CSS says <i>how things look</i></h2>
+    <p>Same HTML, new look. CSS rules pick elements with <b>selectors</b> and set properties like color, spacing and shadows.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Layer 3 · JS = behavior</div>
+    <div class="visual"><div class="sbs demo">
+      <div class="cb rise"><div class="cb-h">card.js</div><pre><span class="k">const</span> btn = document.querySelector(<span class="s">'.card button'</span>);
+btn.<span class="y">addEventListener</span>(<span class="s">'click'</span>, () =&gt; {
+  card.classList.<span class="y">toggle</span>(<span class="s">'done'</span>);
+  status.textContent = <span class="s">'Done'</span>;
+});</pre></div>
+      <div class="down">↓ try it: tap the button</div>
+      <div class="pc" id="pcLive"><span class="st">Open</span><h3>Riverside Tower</h3><p>Concrete pour on Level 4</p><button type="button" id="pcBtn">Mark done</button></div>
+    </div></div>
+    <h2>JS says <i>what happens</i></h2>
+    <p>JS listens for events like clicks and <b>changes the page in response</b>. Here it flips a CSS class and updates the text.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">The big picture</div>
+    <div class="visual">
+      <svg viewBox="0 0 320 200" aria-hidden="true" font-family="system-ui" font-size="11" font-weight="700">
+        <g class="rise"><rect x="10" y="20" width="300" height="44" rx="12" fill="#2a1a14" stroke="#ff7a45"/><text x="24" y="47" fill="#ff7a45">HTML</text><text x="300" y="47" text-anchor="end" fill="#a3acc2" font-weight="400">≈ your data model / schema</text></g>
+        <g class="rise" style="--d:.3s"><rect x="10" y="78" width="300" height="44" rx="12" fill="#13243a" stroke="#4ea8ff"/><text x="24" y="105" fill="#4ea8ff">CSS</text><text x="300" y="105" text-anchor="end" fill="#a3acc2" font-weight="400">≈ view templates / formatting</text></g>
+        <g class="rise" style="--d:.6s"><rect x="10" y="136" width="300" height="44" rx="12" fill="#2a2510" stroke="#f7d046"/><text x="24" y="163" fill="#f7d046">JS</text><text x="300" y="163" text-anchor="end" fill="#a3acc2" font-weight="400">≈ controllers / event handlers</text></g>
+      </svg>
+    </div>
+    <h2>Separation of concerns, browser edition</h2>
+    <p>Keep each layer in its lane. When AI-generated code puts styling in JS strings or logic in markup, that's worth questioning in review.</p>
+  </section>
+
+  <section class="card quiz" data-quiz>
+    <div class="kicker">Quiz · Section 1</div>
+    <h2>You want the "Open" badge to be green instead of orange. Which layer do you change?</h2>
+    <div class="qspacer"></div>
+    <div class="opts">
+      <button class="opt" type="button" data-ok="0"><span class="l">A</span>HTML: change the &lt;span&gt;</button>
+      <button class="opt" type="button" data-ok="1"><span class="l">B</span>CSS: change the <code>.st</code> rule</button>
+      <button class="opt" type="button" data-ok="0"><span class="l">C</span>JS: set the color on page load</button>
+    </div>
+    <div class="fb" data-right="Looks belong in CSS. The HTML structure doesn't change, and doing it in JS would be slower and harder to maintain." data-wrong="It's <b>B</b>. Color is presentation, so it belongs in CSS. The HTML structure stays the same, and JS is for behavior."></div>
+    <div class="qspacer"></div>
+  </section>
+
+  <!-- S2 -->
+  <section class="card sect">
+    <div class="visual"><div class="num pop">2</div></div>
+    <div class="kicker">Section 2 of 5</div>
+    <h1>The DOM: the page as <span class="grad">objects</span></h1>
+    <p>The browser doesn't keep your HTML as text. It builds a <b>tree of objects</b> that JS can query and change live.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">HTML text → object tree</div>
+    <div class="visual"><div class="sbs">
+      <div class="cb rise"><pre><span class="t">&lt;article</span> class=<span class="s">"card"</span><span class="t">&gt;</span>
+  <span class="t">&lt;h3&gt;</span>Riverside Tower<span class="t">&lt;/h3&gt;</span>
+  <span class="t">&lt;button&gt;</span>Mark done<span class="t">&lt;/button&gt;</span>
+<span class="t">&lt;/article&gt;</span></pre></div>
+      <div class="down fade" style="--d:.4s">↓ parse</div>
+      <div class="tree rise" style="--d:.6s">article.card            <span class="c">← Element object</span>
+ ├─ h3
+ │   └─ "Riverside Tower"     <span class="c">← Text node</span>
+ └─ button
+     └─ "Mark done"</div>
+    </div></div>
+    <h2>Every tag becomes a node object</h2>
+    <p>Each node has properties (<code>className</code>, <code>textContent</code>), a parent and children. The DOM is this tree plus the API for working with it.</p>
+    <div class="analogy"><span>Like JSON parsed into a <b>Hash/Map of objects</b>, or an ORM's object graph: you work with objects, not raw text.</span></div>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Reading · querySelector</div>
+    <div class="visual"><div class="sbs">
+      <div class="cb rise"><pre><span class="k">const</span> title = document.<span class="y">querySelector</span>(<span class="s">'.card h3'</span>);
+title.textContent   <span class="c">// "Riverside Tower"</span>
+document.<span class="y">querySelectorAll</span>(<span class="s">'button'</span>).length  <span class="c">// 1</span></pre></div>
+      <div class="tree rise" style="--d:.4s">article.card
+ ├─ <span class="sel pulse">h3</span>   <span class="c">← matched by '.card h3'</span>
+ │   └─ "Riverside Tower"
+ └─ button</div>
+    </div></div>
+    <h2>Find nodes with CSS selectors</h2>
+    <p><code>querySelector</code> returns the first match and <code>querySelectorAll</code> returns all of them. They use the <b>same selector syntax as CSS</b>.</p>
+    <div class="analogy"><span>Think <code>Project.where(...)</code> or <code>.find_by</code>, but over the DOM tree.</span></div>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Changing · textContent &amp; classList</div>
+    <div class="visual"><div class="sbs demo">
+      <div class="cb rise"><pre>title.textContent = <span class="s">'Riverside Tower ✓'</span>;
+card.classList.<span class="y">add</span>(<span class="s">'done'</span>);</pre></div>
+      <div class="tg"><button type="button" id="tcBtn">▶ run these 2 lines</button></div>
+      <div class="tree" id="tcTree">article.card
+ ├─ h3
+ │   └─ "Riverside Tower"
+ └─ button</div>
+    </div></div>
+    <h2>Change a node and the screen updates</h2>
+    <p>Set a property and the browser re-renders that part of the page. No reload and no server round trip.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Building · createElement + appendChild</div>
+    <div class="visual"><div class="sbs demo">
+      <div class="cb"><pre><span class="k">const</span> li = document.<span class="y">createElement</span>(<span class="s">'li'</span>);
+li.textContent = <span class="s">'RFI #'</span> + n;
+list.<span class="y">appendChild</span>(li);</pre></div>
+      <div class="tg"><button type="button" id="acBtn">+ appendChild</button><button type="button" id="acReset">reset</button></div>
+      <div class="row2" style="align-items:stretch"><div class="tree" id="acTree" style="flex:1;font-size:11px"></div><div class="mini" style="flex:1"><b style="font-size:11px">RFIs</b><ul id="acUl" style="padding-left:16px;margin:4px 0"></ul></div></div>
+    </div></div>
+    <h2>Create nodes, then attach them</h2>
+    <p>New elements exist only in memory until you <b>append them into the tree</b>, and then they appear on screen. Tap the button to watch both sides change.</p>
+  </section>
+
+  <section class="card quiz" data-quiz>
+    <div class="kicker">Quiz · Section 2</div>
+    <h2>What does this do?</h2>
+    <div class="qcode"><span class="k">const</span> p = document.createElement(<span class="s">'p'</span>);
+p.textContent = <span class="s">'Hello'</span>;</div>
+    <div class="opts">
+      <button class="opt" type="button" data-ok="0"><span class="l">A</span>Shows "Hello" at the bottom of the page</button>
+      <button class="opt" type="button" data-ok="1"><span class="l">B</span>Nothing visible yet: it's not in the tree</button>
+      <button class="opt" type="button" data-ok="0"><span class="l">C</span>Throws an error</button>
+    </div>
+    <div class="fb" data-right="The element exists in memory but isn't attached. It appears only after something like <code>document.body.appendChild(p)</code>." data-wrong="It's <b>B</b>. <code>createElement</code> makes a detached node. Nothing shows until you <code>appendChild</code> it somewhere in the tree."></div>
+  </section>
+
+  <!-- S3 -->
+  <section class="card sect">
+    <div class="visual"><div class="num pop">3</div></div>
+    <div class="kicker">Section 3 of 5</div>
+    <h1>CSS <span class="grad">essentials</span></h1>
+    <p>Five ideas cover most of what you'll see in real code: selectors, the cascade, the box model, Flexbox and Grid.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Selectors · who gets styled</div>
+    <div class="visual"><div class="demo">
+      <div class="tg" id="selTg"><button type="button" data-sel="h3" class="on">h3</button><button type="button" data-sel=".st">.st</button><button type="button" data-sel="#featured">#featured</button><button type="button" data-sel=".card p">.card p</button><button type="button" data-sel="button:hover">button:hover</button></div>
+      <div class="pc" id="selCard"><span class="st">Open</span><h3 id="featured">Riverside Tower</h3><p>Concrete pour on Level 4</p><button tabindex="-1" type="button">Mark done</button></div>
+      <div class="find" id="selNote">tag selector: every &lt;h3&gt;</div>
+    </div></div>
+    <h2>Selectors are queries</h2>
+    <p>Tag (<code>h3</code>), class (<code>.st</code>), id (<code>#featured</code>), descendant (<code>.card p</code>) and state (<code>:hover</code>). Tap one to highlight what it matches.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Cascade &amp; specificity</div>
+    <div class="visual"><div class="sbs">
+      <div class="cb rise"><pre><span class="k">h3</span>        { color: green; }  <span class="c">/* 0,0,1 */</span>
+<span class="k">.title</span>    { color: blue;  }  <span class="c">/* 0,1,0 */</span>
+<span class="k">#featured</span> { color: red;   }  <span class="c">/* 1,0,0 ← wins */</span></pre></div>
+      <svg viewBox="0 0 320 70" class="rise" style="--d:.4s;max-height:90px" font-family="system-ui" font-size="10" font-weight="700">
+        <rect x="10" y="10" width="90" height="40" rx="8" fill="#0f2a20" stroke="#3ddc97"/><text x="55" y="34" text-anchor="middle" fill="#3ddc97">tag</text>
+        <text x="110" y="34" fill="#5d6680">&lt;</text>
+        <rect x="120" y="10" width="90" height="40" rx="8" fill="#13243a" stroke="#4ea8ff"/><text x="165" y="34" text-anchor="middle" fill="#4ea8ff">class</text>
+        <text x="220" y="34" fill="#5d6680">&lt;</text>
+        <rect x="230" y="10" width="80" height="40" rx="8" fill="#3a1624" stroke="#ff5c8a"/><text x="270" y="34" text-anchor="middle" fill="#ff5c8a">id</text>
+      </svg>
+    </div></div>
+    <h2>When rules conflict, the more specific one wins</h2>
+    <p>Specificity is compared like a version number (id, class, tag), and <b>source order only breaks ties</b>. Inline styles and <code>!important</code> override both.</p>
+    <div class="analogy"><span>Config precedence: framework defaults &lt; <code>config/*.yml</code> &lt; ENV vars &lt; CLI flags.</span></div>
+  </section>
+
+  <section class="card">
+    <div class="kicker">The box model · interactive</div>
+    <div class="visual"><div class="demo">
+      <div class="bm" id="bm"><div class="bm-m"><div class="bm-b"><div class="bm-p"><div class="bm-c">content</div></div></div></div></div>
+      <div class="tg" id="bmTg"><button type="button" data-v="--m" data-a="4px,16px,30px">margin</button><button type="button" data-v="--b" data-a="1px,4px,10px">border</button><button type="button" data-v="--p" data-a="2px,14px,28px">padding</button></div>
+      <div class="find"><span class="hl-html">margin</span> outside · <span class="hl-js">border</span> · <span class="hl-g">padding</span> inside · <span class="hl-css">content</span></div>
+    </div></div>
+    <h2>Every element is a box</h2>
+    <p>Content, then padding, then border, then margin. Tap to cycle each one. Use <code>box-sizing: border-box</code> so <code>width</code> includes padding and border; almost every codebase sets it globally.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Flexbox · one direction</div>
+    <div class="visual"><div class="demo">
+      <div class="flexbox" id="fx"><div>A</div><div>B</div><div>C</div></div>
+      <div class="tg" id="fxTg">
+        <button type="button" data-p="flexDirection" data-a="row,column">direction</button>
+        <button type="button" data-p="justifyContent" data-a="flex-start,center,space-between,flex-end">justify</button>
+        <button type="button" data-p="alignItems" data-a="stretch,center,flex-start,flex-end">align</button>
+      </div>
+      <div class="find mono" id="fxNote">display:flex; flex-direction:row</div>
+    </div></div>
+    <h2>Flexbox lays things out in a row or a column</h2>
+    <p><code>justify-content</code> works along the main axis and <code>align-items</code> along the cross axis. It's the default choice for toolbars, nav bars and card rows.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Grid · two directions</div>
+    <div class="visual"><div class="demo">
+      <div class="gridbox" id="gd"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div></div>
+      <div class="tg" id="gdTg">
+        <button type="button" data-c="repeat(3,1fr)" class="on">3 equal</button>
+        <button type="button" data-c="2fr 1fr">2fr 1fr</button>
+        <button type="button" data-c="80px 1fr 1fr">80px 1fr 1fr</button>
+        <button type="button" data-c="repeat(auto-fill,minmax(60px,1fr))">auto-fill</button>
+      </div>
+      <div class="find mono" id="gdNote">grid-template-columns: repeat(3,1fr)</div>
+    </div></div>
+    <h2>Grid lays things out in rows <i>and</i> columns</h2>
+    <p>You define the tracks and items flow into them. Use it for page layouts and dashboards. A rough rule: <b>Flex for a line of things, Grid for a 2D layout</b>.</p>
+  </section>
+
+  <section class="card quiz" data-quiz>
+    <div class="kicker">Quiz · Section 3</div>
+    <h2>A toolbar should have its buttons spread out with equal space between them. What do you reach for?</h2>
+    <div class="qspacer"></div>
+    <div class="opts">
+      <button class="opt" type="button" data-ok="1"><span class="l">A</span><code>display:flex; justify-content:space-between</code></button>
+      <button class="opt" type="button" data-ok="0"><span class="l">B</span><code>margin-left: 37px</code> on each button</button>
+      <button class="opt" type="button" data-ok="0"><span class="l">C</span>A <code>&lt;table&gt;</code></button>
+    </div>
+    <div class="fb" data-right="A single row of items is Flexbox's home turf, and space-between spreads them out at any width." data-wrong="It's <b>A</b>. Hard-coded margins break when widths change, and tables are for tabular data. A row of items is a Flexbox job."></div>
+    <div class="qspacer"></div>
+  </section>
+
+  <!-- S4 -->
+  <section class="card sect">
+    <div class="visual"><div class="num pop">4</div></div>
+    <div class="kicker">Section 4 of 5</div>
+    <h1>JS in the <span class="grad">browser</span></h1>
+    <p>Events, network calls, JSON and the event loop: the runtime model that everything else, including React, is built on.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Events · the browser calls you</div>
+    <div class="visual"><div class="demo">
+      <div class="cb"><pre>btn.<span class="y">addEventListener</span>(<span class="s">'click'</span>, (event) =&gt; {
+  log(<span class="s">'clicked '</span> + event.target.textContent);
+});</pre></div>
+      <div class="tg"><button type="button" class="evb">Save</button><button type="button" class="evb">Approve</button><button type="button" class="evb">Reject</button></div>
+      <div class="log" id="evLog"><div style="color:var(--dim)">// tap a button…</div></div>
+    </div></div>
+    <h2>Register handlers, then react</h2>
+    <p>You don't poll for clicks. You register a callback and the browser calls it with an <b>event object</b>. Clicks, typing, scrolling and form submits are all events.</p>
+    <div class="analogy"><span>Like registering a <b>route → controller action</b>, or subscribing to a message queue topic.</span></div>
+  </section>
+
+  <section class="card">
+    <div class="kicker">fetch · HTTP from the browser</div>
+    <div class="visual"><div class="sbs">
+      <div class="cb rise"><pre><span class="k">const</span> res = <span class="k">await</span> <span class="y">fetch</span>(<span class="s">'/rest/v1.0/projects'</span>); <span class="c">// example</span>
+<span class="k">if</span> (!res.ok) <span class="k">throw new</span> Error(res.status);
+<span class="k">const</span> projects = <span class="k">await</span> res.<span class="y">json</span>();</pre></div>
+      <svg viewBox="0 0 320 70" class="rise" style="--d:.3s;max-height:90px" font-family="ui-monospace,Menlo,monospace" font-size="9" font-weight="700">
+        <rect x="6" y="14" width="80" height="40" rx="10" fill="#121622" stroke="#2a3145"/><text x="46" y="38" text-anchor="middle" fill="#cdd5ea">browser</text>
+        <rect x="234" y="14" width="80" height="40" rx="10" fill="#121622" stroke="#2a3145"/><text x="274" y="38" text-anchor="middle" fill="#cdd5ea">Rails API</text>
+        <path d="M90 26 H230" stroke="#4ea8ff" stroke-width="2" class="flow"/><text x="160" y="20" text-anchor="middle" fill="#4ea8ff">GET …/projects</text>
+        <path d="M230 44 H90" stroke="#3ddc97" stroke-width="2" class="flow"/><text x="160" y="62" text-anchor="middle" fill="#3ddc97">200 · JSON</text>
+      </svg>
+    </div></div>
+    <h2><code>fetch</code> is your HTTP client</h2>
+    <p>It returns a <b>Promise</b>, a value that arrives later, and <code>await</code> pauses this function without blocking the page. Note that it only rejects on network failure, so <b>check <code>res.ok</code></b> for 4xx/5xx responses.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">JSON · the shape of data</div>
+    <div class="visual"><div class="sbs">
+      <div class="cb rise"><div class="cb-h">response body (text)</div><pre>[{<span class="s">"id"</span>:<span class="y">42</span>,<span class="s">"name"</span>:<span class="s">"Riverside Tower"</span>,<span class="s">"open_rfis"</span>:<span class="y">7</span>}]</pre></div>
+      <div class="down fade" style="--d:.4s">↓ res.json()  ≈  JSON.parse</div>
+      <div class="cb rise" style="--d:.6s"><div class="cb-h">JS objects</div><pre>projects[<span class="y">0</span>].name       <span class="c">// "Riverside Tower"</span>
+projects.<span class="y">map</span>(p =&gt; p.id)  <span class="c">// [42]</span></pre></div>
+    </div></div>
+    <h2>Text on the wire, objects in memory</h2>
+    <p>Your Rails <code>render json:</code> becomes JS arrays and objects in the browser. JSON has no dates or classes, only strings, numbers, booleans, null, arrays and objects.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">The event loop · one thread</div>
+    <div class="visual"><div class="demo">
+      <div class="cb"><pre>log(<span class="s">'1 start'</span>);
+setTimeout(() =&gt; log(<span class="s">'4 timeout'</span>), <span class="y">0</span>);
+Promise.resolve().then(() =&gt; log(<span class="s">'3 promise'</span>));
+log(<span class="s">'2 end'</span>);</pre></div>
+      <div class="tg"><button type="button" id="elBtn">▶ run</button></div>
+      <div class="log" id="elLog"><div style="color:var(--dim)">// guess the order, then run…</div></div>
+    </div></div>
+    <h2>Run to completion, then the queues</h2>
+    <p>Synchronous code runs first. Then the loop drains <b>microtasks</b> (promise callbacks), then takes the next <b>task</b> (timers, clicks, network). A long task blocks everything, including clicks.</p>
+    <div class="analogy"><span>Not a Puma thread pool: picture <b>one worker</b> taking jobs from a queue, one at a time.</span></div>
+  </section>
+
+  <section class="card quiz" data-quiz>
+    <div class="kicker">Quiz · Section 4</div>
+    <h2><code>fetch</code> returns HTTP 500. What happens?</h2>
+    <div class="qcode"><span class="k">const</span> res = <span class="k">await</span> fetch(url);
+<span class="k">const</span> data = <span class="k">await</span> res.json();</div>
+    <div class="opts">
+      <button class="opt" type="button" data-ok="0"><span class="l">A</span>fetch throws, so we land in the catch block</button>
+      <button class="opt" type="button" data-ok="1"><span class="l">B</span>fetch resolves normally, and we must check <code>res.ok</code></button>
+      <button class="opt" type="button" data-ok="0"><span class="l">C</span>The browser retries automatically</button>
+    </div>
+    <div class="fb" data-right="fetch only rejects on network failure. HTTP errors are a successful response with <code>ok === false</code>, a classic bug to look for in AI-written code." data-wrong="It's <b>B</b>. fetch only rejects on network errors, so a 500 still resolves. Without a <code>res.ok</code> check, the code happily parses the error body."></div>
+  </section>
+
+  <!-- S5 -->
+  <section class="card sect">
+    <div class="visual"><div class="num pop">5</div></div>
+    <div class="kicker">Section 5 of 5 · Mini-lab</div>
+    <h1>Build it <span class="grad">by hand</span></h1>
+    <p>A projects list in plain JS: fetch JSON, then build DOM nodes. It's everything so far in about 15 lines, and it shows why React exists.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">The code</div>
+    <div class="visual"><div class="cb rise" style="width:100%"><div class="cb-h">projects.js (vanilla)</div><pre><span class="k">async function</span> <span class="y">loadProjects</span>() {
+  <span class="k">const</span> res = <span class="k">await</span> fetch(<span class="s">'/rest/v1.0/projects'</span>);
+  <span class="k">if</span> (!res.ok) <span class="k">throw new</span> Error(res.status);
+  <span class="k">const</span> projects = <span class="k">await</span> res.json();
+
+  <span class="k">const</span> ul = document.querySelector(<span class="s">'#projects'</span>);
+  ul.textContent = <span class="s">''</span>;              <span class="c">// clear old list</span>
+  <span class="k">for</span> (<span class="k">const</span> p <span class="k">of</span> projects) {
+    <span class="k">const</span> li = document.createElement(<span class="s">'li'</span>);
+    li.textContent = p.name + <span class="s">' · '</span> + p.open_rfis + <span class="s">' RFIs'</span>;
+    li.addEventListener(<span class="s">'click'</span>, () =&gt; li.classList.toggle(<span class="s">'done'</span>));
+    ul.appendChild(li);
+  }
+}
+loadProjects();</pre></div></div>
+    <h2>fetch → JSON → loop → createElement</h2>
+    <p>Every part is something you've seen. Using <code>textContent</code> rather than <code>innerHTML</code> also <b>prevents XSS</b>: data is never parsed as HTML.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Try it · edit &amp; run</div>
+    <div class="visual"><div class="demo lab">
+      <textarea id="labSrc" spellcheck="false"></textarea>
+      <div class="tg"><button type="button" id="labRun">▶ Run</button><button type="button" id="labReset">reset</button></div>
+      <iframe id="labOut" sandbox="allow-scripts" title="live preview"></iframe>
+    </div></div>
+    <p style="font-size:13px">A fake <code>fetch</code> returns sample JSON, so it runs offline. Try adding a project or changing the markup, then tap Run.</p>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Where this gets painful</div>
+    <div class="visual"><div class="sbs">
+      <div class="cb rise"><pre><span class="c">// a new RFI arrives… now update by hand:</span>
+li.textContent = <span class="s">'Riverside · 8 RFIs'</span>;   <span class="c">// the list</span>
+badge.textContent = total;               <span class="c">// the header badge</span>
+sidebarCount.textContent = total;        <span class="c">// the sidebar</span>
+<span class="k">if</span> (total === <span class="y">0</span>) emptyState.hidden = <span class="k">false</span>; <span class="c">// …</span>
+<span class="c">// forgot one? → UI out of sync 🐛</span></pre></div>
+      <svg viewBox="0 0 320 80" class="rise" style="--d:.5s;max-height:100px" font-family="system-ui" font-size="10" font-weight="700">
+        <rect x="120" y="26" width="80" height="28" rx="8" fill="#0f2a20" stroke="#3ddc97"/><text x="160" y="44" text-anchor="middle" fill="#3ddc97">data</text>
+        <g stroke="#ff5c8a" stroke-width="1.5" fill="none" class="flow"><path d="M120 34 C80 10 60 10 40 14"/><path d="M120 46 C80 70 60 70 40 66"/><path d="M200 34 C240 10 260 10 280 14"/><path d="M200 46 C240 70 260 70 280 66"/></g>
+        <text x="20" y="18" fill="#ff7a45">list</text><text x="10" y="70" fill="#ff7a45">badge</text><text x="282" y="18" fill="#ff7a45">sidebar</text><text x="282" y="70" fill="#ff7a45">empty</text>
+      </svg>
+    </div></div>
+    <h2>Every change, every place, by hand</h2>
+    <p>With manual DOM code, you track every spot that shows a piece of data. It gets <b>buggy fast as the app grows</b>. React's answer: describe the UI as a function of the data, and let it do the updates.</p>
+    <div class="analogy"><span>Like hand-written SQL migrations for every change vs. declaring the schema and letting a tool compute the diff.</span></div>
+  </section>
+
+  <section class="card">
+    <div class="kicker">Recap</div>
+    <h2>How a web page works</h2>
+    <ul class="take">
+      <li class="rise" style="--d:.1s"><b>HTML</b> = structure, <b>CSS</b> = looks, <b>JS</b> = behavior.</li>
+      <li class="rise" style="--d:.3s"><b>DOM</b> = a live object tree; <code>querySelector</code>, <code>textContent</code> and <code>appendChild</code> read and change it.</li>
+      <li class="rise" style="--d:.5s"><b>CSS:</b> selectors pick elements, specificity settles conflicts, every element is a box, Flex for a line, Grid for 2D.</li>
+      <li class="rise" style="--d:.7s"><b>JS:</b> events call your handlers, <code>fetch</code> returns Promises (check <code>res.ok</code>), and one thread runs everything.</li>
+      <li class="rise" style="--d:.9s"><b>Manual DOM updates don't scale</b>, and that's the problem React solves. Next: React, the "why" and the "how".</li>
+    </ul>
+    <div class="score" id="score"></div>
+    <button class="btn ghost" id="restart" type="button" style="margin-top:10px">↺ Restart</button>
+  </section>
+
+  <div class="bottom">
+    <button class="nav" id="prev" type="button" aria-label="Previous card">‹</button>
+    <span class="hint">tap · swipe · ← →</span>
+    <button class="nav" id="next" type="button" aria-label="Next card">›</button>
+  </div>
+</main>
+</div>
+<script>
+(function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id);};
+  var stage=$('stage'), cards=[].slice.call(document.querySelectorAll('.card')), segsEl=$('segs'), countEl=$('count'), prevBtn=$('prev'), nextBtn=$('next');
+  var cur=0, N=cards.length, answered=0, correct=0, NQ=document.querySelectorAll('[data-quiz]').length;
+  cards.forEach(function(){ var s=document.createElement('div'); s.className='seg'; s.appendChild(document.createElement('i')); segsEl.appendChild(s); });
+  var segs=segsEl.children;
+  function go(n){
+    n=Math.max(0,Math.min(N-1,n));
+    cards.forEach(function(c,k){ c.classList.toggle('past',k<n); if(k!==n) c.classList.remove('active'); c.setAttribute('aria-hidden',k!==n); });
+    var card=cards[n]; card.classList.remove('active'); void card.offsetWidth; card.classList.add('active');
+    for(var k=0;k<N;k++) segs[k].classList.toggle('done',k<=n);
+    countEl.textContent=(n+1)+' / '+N; prevBtn.disabled=n===0; nextBtn.disabled=n===N-1; cur=n; try{var _k='lp:'+location.pathname.split('/').pop(),_o=JSON.parse(localStorage.getItem(_k)||'{}');localStorage.setItem(_k,JSON.stringify({max:Math.max(_o.max||0,n+1),total:N}));}catch(_e){} updateScore();
+    try{ history.replaceState(null,'','#'+(n+1)); }catch(e){}
+  }
+  function next(){ if(cur<N-1) go(cur+1); } function prev(){ if(cur>0) go(cur-1); }
+  prevBtn.addEventListener('click',function(e){e.stopPropagation();prev();});
+  nextBtn.addEventListener('click',function(e){e.stopPropagation();next();});
+  $('restart').addEventListener('click',function(e){e.stopPropagation();go(0);});
+  var lastSwipe=0;
+  stage.addEventListener('click',function(e){
+    if(Date.now()-lastSwipe<450) return;
+    if(e.target.closest('button, a, .opts, .demo, textarea, iframe')) return;
+    var r=stage.getBoundingClientRect(); if((e.clientX-r.left)/r.width<0.3) prev(); else next();
+  });
+  var sx=0,sy=0,tr=false;
+  stage.addEventListener('touchstart',function(e){ if(e.target.closest('textarea')) return; var t=e.touches[0]; sx=t.clientX; sy=t.clientY; tr=true; },{passive:true});
+  stage.addEventListener('touchend',function(e){ if(!tr) return; tr=false; var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.2){ lastSwipe=Date.now(); if(dx<0) next(); else prev(); } },{passive:true});
+  document.addEventListener('keydown',function(e){
+    if(e.target.tagName==='TEXTAREA') return;
+    if(e.target.closest&&e.target.closest('button')&&(e.key===' '||e.key==='Enter')) return;
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home') go(0); else if(e.key==='End') go(N-1);
+  });
+  [].forEach.call(document.querySelectorAll('[data-quiz]'),function(q){
+    var opts=q.querySelector('.opts'), fb=q.querySelector('.fb');
+    [].forEach.call(opts.querySelectorAll('.opt'),function(b){
+      b.addEventListener('click',function(e){
+        e.stopPropagation(); if(opts.classList.contains('done')) return;
+        opts.classList.add('done'); answered++;
+        var ok=b.getAttribute('data-ok')==='1'; if(ok) correct++; else b.classList.add('wrong');
+        opts.querySelector('[data-ok="1"]').classList.add('right');
+        fb.innerHTML='<span class="tag" style="color:'+(ok?'var(--green)':'var(--pink)')+'">'+(ok?'✓ Correct.':'✗ Not quite.')+'</span> '+fb.getAttribute(ok?'data-right':'data-wrong')+'<br><span style="color:var(--dim);font-size:12px">Tap or swipe to continue →</span>';
+        fb.classList.add('show');
+      });
+    });
+  });
+  function updateScore(){ var s=$('score'); s.textContent=answered?('Quiz score: '+correct+' / '+NQ+(answered<NQ?' ('+(NQ-answered)+' skipped)':'')):''; }
+
+  // S1: live card
+  $('pcBtn').addEventListener('click',function(){ var c=$('pcLive'), d=c.classList.toggle('done'); c.querySelector('.st').textContent=d?'Done':'Open'; this.textContent=d?'Undo':'Mark done'; });
+  // S2: textContent/classList
+  var tcBase=$('tcTree').innerHTML, tcOn=false;
+  $('tcBtn').addEventListener('click',function(){ tcOn=!tcOn;
+    $('tcTree').innerHTML = tcOn ? 'article.card<span class="new">.done</span>\n ├─ h3\n │   └─ <span class="new">"Riverside Tower ✓"</span>\n └─ button' : tcBase;
+    this.textContent = tcOn ? '↺ undo' : '▶ run these 2 lines'; });
+  // S2: appendChild
+  var n=0;
+  function acRender(flash){ var t='ul#rfis'; var lis=$('acUl').children; for(var i=0;i<lis.length;i++){ t+='\n '+(i===lis.length-1?'└─ ':'├─ ')+(flash&&i===lis.length-1?'<span class="new">li "'+lis[i].textContent+'"</span>':'li "'+lis[i].textContent+'"'); } if(!lis.length) t+='\n  (empty)'; $('acTree').innerHTML=t; }
+  $('acBtn').addEventListener('click',function(){ if(n>=5) return; n++; var li=document.createElement('li'); li.textContent='RFI #'+(40+n); $('acUl').appendChild(li); acRender(true); });
+  $('acReset').addEventListener('click',function(){ n=0; $('acUl').textContent=''; acRender(false); });
+  acRender(false);
+  // S3: selectors
+  var notes={'h3':'tag selector: every <h3>','.st':'class selector: class="st"','#featured':'id selector: the one id="featured"','.card p':'descendant: <p> inside .card','button:hover':'pseudo-class: the button while hovered'};
+  function selShow(sel){ var card=$('selCard'); [].forEach.call(card.querySelectorAll('*'),function(el){ el.style.outline=''; el.style.outlineOffset=''; });
+    var q=sel==='button:hover'?'button':sel.replace('.card ',''); [].forEach.call(card.querySelectorAll(q),function(el){ el.style.outline='3px solid #f7d046'; el.style.outlineOffset='2px'; });
+    $('selNote').textContent=notes[sel]; }
+  [].forEach.call(document.querySelectorAll('#selTg button'),function(b){ b.addEventListener('click',function(){ [].forEach.call(this.parentNode.children,function(x){x.classList.remove('on');}); this.classList.add('on'); selShow(this.getAttribute('data-sel')); }); });
+  selShow('h3');
+  // cycling toggles helper
+  function cycler(sel, apply){ [].forEach.call(document.querySelectorAll(sel),function(b){ var vals=b.getAttribute('data-a').split(','), i=0; b.addEventListener('click',function(){ i=(i+1)%vals.length; apply(b,vals[i]); b.classList.add('on'); }); }); }
+  cycler('#bmTg button',function(b,v){ $('bm').style.setProperty(b.getAttribute('data-v'),v); b.textContent=b.textContent.split(':')[0]+': '+v; });
+  var fx=$('fx');
+  cycler('#fxTg button',function(b,v){ fx.style[b.getAttribute('data-p')]=v; var s=fx.style; $('fxNote').textContent='flex-direction:'+(s.flexDirection||'row')+'; justify-content:'+(s.justifyContent||'flex-start')+'; align-items:'+(s.alignItems||'stretch'); });
+  [].forEach.call(document.querySelectorAll('#gdTg button'),function(b){ b.addEventListener('click',function(){ [].forEach.call(this.parentNode.children,function(x){x.classList.remove('on');}); this.classList.add('on'); var c=this.getAttribute('data-c'); $('gd').style.gridTemplateColumns=c; $('gdNote').textContent='grid-template-columns: '+c; }); });
+  // S4: events
+  [].forEach.call(document.querySelectorAll('.evb'),function(b){ b.addEventListener('click',function(e){ var d=document.createElement('div'); d.innerHTML='<span style="color:var(--js)">click</span> → handler("'+e.target.textContent+'") · '+new Date().toLocaleTimeString(); var L=$('evLog'); if(L.children.length>=4) L.removeChild(L.firstChild); L.appendChild(d); }); });
+  // S4: event loop
+  $('elBtn').addEventListener('click',function(){ var L=$('elLog'); L.textContent=''; var out=function(t,c){ var d=document.createElement('div'); d.innerHTML='<span style="color:'+c+'">'+t+'</span>'; L.appendChild(d); };
+    out('1 start  (sync)','#cdd5ea'); setTimeout(function(){ out('4 timeout  (task queue)','#f7d046'); },350); Promise.resolve().then(function(){ setTimeout(function(){ out('3 promise  (microtask)','#a78bfa'); },200); }); setTimeout(function(){},0); out('2 end  (sync)','#cdd5ea'); });
+  // S5: lab
+  var LAB=['<ul id="projects"></ul>','<style>','  body{font:14px system-ui;margin:10px} li{padding:6px 8px;margin:4px 0;background:#f1f3f8;border-radius:6px;cursor:pointer}','  li.done{text-decoration:line-through;opacity:.6}','</style>','<script>','// fake fetch so this runs offline (stands in for /rest/v1.0/projects)','const fetch = async () => ({ ok: true, json: async () => [','  { id: 42, name: "Riverside Tower", open_rfis: 7 },','  { id: 43, name: "Mercy Hospital Wing", open_rfis: 2 }','] });','','async function loadProjects() {','  const res = await fetch("/rest/v1.0/projects");','  if (!res.ok) throw new Error(res.status);','  const projects = await res.json();','  const ul = document.querySelector("#projects");','  ul.textContent = "";','  for (const p of projects) {','    const li = document.createElement("li");','    li.textContent = p.name + " · " + p.open_rfis + " RFIs";','    li.addEventListener("click", () => li.classList.toggle("done"));','    ul.appendChild(li);','  }','}','loadProjects();','<\/script>'].join('\n');
+  function labRun(){ $('labOut').srcdoc=$('labSrc').value; }
+  $('labSrc').value=LAB; labRun();
+  $('labRun').addEventListener('click',labRun);
+  $('labReset').addEventListener('click',function(){ $('labSrc').value=LAB; labRun(); });
+
+  var start=parseInt((location.hash||'').slice(1),10); go(isNaN(start)?0:start-1);
+})();
+</script>
+</body>
+</html>

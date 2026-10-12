@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07080d">
+<title>Lesson 1b · How a React App Loads</title>
+<style>
+:root{
+  --bg:#07080d; --panel:#121622; --panel2:#181d2b; --line:#2a3145; --text:#eef1f8; --muted:#a3acc2; --dim:#5d6680;
+  --html:#ff7a45; --css:#4ea8ff; --js:#f7d046; --green:#3ddc97; --purple:#a78bfa; --pink:#ff5c8a; --cyan:#4ee6e0;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;overscroll-behavior:none}
+.app{position:fixed;inset:0;display:flex;justify-content:center;background:radial-gradient(1200px 600px at 50% -10%,#141a2e 0,transparent 60%),var(--bg)}
+.stage{position:relative;width:100%;max-width:460px;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:pan-y}
+@media (min-width:600px){.stage{height:min(100%,900px);margin:auto;border-radius:28px;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.6)}}
+.stage::before{content:"";position:absolute;inset:0;background:radial-gradient(500px 300px at 85% 10%,rgba(167,139,250,.10),transparent 70%),radial-gradient(500px 300px at 0% 90%,rgba(78,168,255,.08),transparent 70%);pointer-events:none}
+.top{position:absolute;left:0;right:0;top:0;z-index:5;padding:calc(env(safe-area-inset-top) + 10px) 14px 0}
+.segs{display:flex;gap:3px}
+.seg{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+.seg i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--css),var(--purple));transition:width .35s ease}
+.seg.done i{width:100%}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:12px;color:var(--muted);letter-spacing:.02em}
+.meta b{color:var(--text);font-weight:600}
+.card{position:absolute;inset:0;padding:calc(env(safe-area-inset-top) + 58px) 22px calc(env(safe-area-inset-bottom) + 64px);display:flex;flex-direction:column;opacity:0;visibility:hidden;transform:translateX(40px) scale(.98);transition:opacity .35s ease,transform .45s cubic-bezier(.2,.8,.2,1),visibility 0s linear .45s}
+.card.past{transform:translateX(-40px) scale(.98)}
+.card.active{opacity:1;visibility:visible;transform:none;transition:opacity .35s ease,transform .45s cubic-bezier(.2,.8,.2,1),visibility 0s}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--purple);margin-bottom:6px}
+.visual{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;margin:4px 0 14px}
+.visual svg{width:100%;height:100%;max-height:330px;overflow:visible}
+h1,h2{margin:0 0 10px;line-height:1.15;letter-spacing:-.02em}
+h1{font-size:clamp(30px,9vw,40px)}
+h2{font-size:clamp(22px,6.4vw,28px)}
+p{margin:0 0 8px;font-size:clamp(15px,4.2vw,17px);line-height:1.5;color:var(--muted)}
+p b,p strong{color:var(--text);font-weight:600}
+code,.mono{font-family:var(--mono);font-size:.9em}
+p code,.analogy code{background:#1b2131;border:1px solid var(--line);padding:1px 5px;border-radius:6px;color:#dfe5f5}
+.analogy{display:flex;gap:10px;align-items:flex-start;background:linear-gradient(135deg,rgba(78,168,255,.10),rgba(167,139,250,.10));border:1px solid rgba(120,140,255,.25);border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.45;color:#cfd6ea;margin-top:6px}
+.analogy::before{content:"⚙";font-size:15px;color:var(--css);line-height:1.3}
+.analogy b{color:#fff}
+.bottom{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:0 14px calc(env(safe-area-inset-bottom) + 12px)}
+.nav{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:rgba(18,22,34,.8);color:var(--text);font-size:20px;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(8px)}
+.nav:disabled{opacity:.3}
+.hint{font-size:12px;color:var(--dim)}
+svg *{transform-box:fill-box;transform-origin:center}
+.active .pop{animation:pop .55s cubic-bezier(.2,.9,.3,1.35) both;animation-delay:var(--d,0s)}
+.active .fade{animation:fade .6s ease both;animation-delay:var(--d,0s)}
+.active .rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0s)}
+.growx{transform-origin:left center}
+.active .growx{animation:growx .6s ease both;animation-delay:var(--d,0s)}
+.active .draw{stroke-dasharray:var(--len,300);animation:draw 1s ease both;animation-delay:var(--d,0s)}
+.flow{stroke-dasharray:4 6;animation:flow 1s linear infinite}
+.pulse{animation:pulse 2s ease-in-out infinite;animation-delay:var(--pd,0s)}
+@keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes growx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes draw{from{stroke-dashoffset:var(--len,300)}to{stroke-dashoffset:0}}
+@keyframes flow{to{stroke-dashoffset:-20}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes goR{0%{transform:translateX(0);opacity:0}10%,85%{opacity:1}100%{transform:translateX(60px);opacity:0}}
+@keyframes goL{0%{transform:translateX(0);opacity:0}10%,85%{opacity:1}100%{transform:translateX(-72px);opacity:0}}
+.req{animation:goR 2.4s ease-in-out infinite}
+.chunk{opacity:0;animation:goL 2.4s linear infinite;animation-delay:var(--d,0s)}
+.titlebadge{display:inline-flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 10px;margin-bottom:14px;align-self:flex-start;background:rgba(255,255,255,.03)}
+.titlebadge i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+.tapme{margin-top:6px;font-size:13px;color:var(--dim);animation:pulse 1.8s infinite}
+.grad{background:linear-gradient(90deg,var(--html),var(--js) 35%,var(--css) 70%,var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lay{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px}
+.lay-frame{width:100%;border:1px solid var(--line);border-radius:14px;padding:8px;background:#0d111b;display:flex;flex-direction:column;gap:6px;animation:resize 5s ease-in-out infinite alternate;position:relative}
+@keyframes resize{0%,15%{width:100%}85%,100%{width:52%}}
+.lay .b{border-radius:8px;font:600 11px/1 var(--mono);display:flex;align-items:center;justify-content:center;color:#0b0e16;padding:0 4px;overflow:hidden;white-space:nowrap}
+.lay .hdr{height:26px;background:var(--css)}
+.lay-row{display:flex;gap:6px}
+.lay .side{flex:0 0 26%;height:54px;background:var(--purple)}
+.lay .main{flex:1;height:54px;background:var(--green)}
+.lay-cards{display:flex;flex-wrap:wrap;gap:6px}
+.lay .c{flex:1 1 64px;height:30px;background:var(--js)}
+.ruler{font:12px var(--mono);color:var(--muted);display:flex;align-items:center;gap:8px}
+.ruler span{display:inline-block;height:2px;width:40px;background:linear-gradient(90deg,var(--pink),var(--js));border-radius:2px}
+.comp{position:relative;width:250px;height:230px;perspective:800px}
+.comp-in{position:absolute;inset:0;transform-style:preserve-3d}
+.layer{position:absolute;left:25px;top:30px;width:200px;height:170px;border-radius:14px;border:1px solid rgba(255,255,255,.18);transform-origin:center;animation:explode 6s ease-in-out infinite;--z:0px;display:flex;align-items:flex-end;justify-content:flex-end;padding:8px;font:600 10px var(--mono);color:rgba(255,255,255,.85)}
+.l1{--z:-60px;background-color:#151b30;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:16px 16px}
+.l2{--z:0px;background:rgba(78,168,255,.18)}
+.l2::before{content:"";position:absolute;left:66px;top:16px;width:112px;height:10px;border-radius:5px;background:rgba(255,255,255,.75);box-shadow:0 22px 0 rgba(255,255,255,.4),0 40px 0 rgba(255,255,255,.4),0 58px 0 rgba(255,255,255,.4),0 86px 0 -1px rgba(61,220,151,.7)}
+.l3{--z:60px;width:56px;background:rgba(167,139,250,.6);animation-name:explode3;align-items:flex-start;justify-content:center;padding-top:10px;text-align:center}
+@keyframes explode{0%,22%,100%{transform:rotateX(56deg) rotateZ(-38deg) translateZ(var(--z))}48%,80%{transform:rotateX(0) rotateZ(0) translateZ(0)}}
+@keyframes explode3{0%,22%,100%{transform:rotateX(56deg) rotateZ(-38deg) translateZ(var(--z))}48%{transform:translateX(-60px)}62%,80%{transform:translateX(0)}}
+.comp-tag{position:absolute;left:0;right:0;bottom:-6px;text-align:center;font:12px var(--mono);color:var(--muted)}
+.cost{width:100%;display:grid;grid-template-columns:92px repeat(5,1fr);gap:6px;font-size:10.5px;align-items:center}
+.cost .h{color:var(--dim);text-align:center;font-weight:600;letter-spacing:.02em}
+.cost .lbl{font:600 11px var(--mono);color:var(--text);line-height:1.3}
+.cost .lbl small{display:block;color:var(--dim);font-weight:400}
+.cell{height:30px;border-radius:8px;background:#151a27;border:1px dashed #262d40}
+.cell.on{background:var(--c);border:0;box-shadow:0 0 14px var(--c)}
+.active .cell.on{animation:light .45s ease both;animation-delay:var(--d,0s)}
+@keyframes light{from{opacity:.1;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+.costtag{grid-column:2/7;font-size:11px;color:var(--muted);text-align:right;margin-top:-2px}
+.qcode{font:13px/1.55 var(--mono);background:#0d111b;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0 14px;color:#cdd5ea;white-space:pre;overflow-x:auto}
+.qcode .k{color:var(--purple)}.qcode .s{color:var(--green)}.qcode .t{color:var(--html)}.qcode .c{color:var(--dim)}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);color:var(--text);font-size:15px;line-height:1.35;cursor:pointer;transition:transform .15s,border-color .2s,background .2s,opacity .2s}
+.opt:active{transform:scale(.98)}
+.opt:focus-visible{outline:2px solid var(--css)}
+.opt .l{flex:0 0 26px;height:26px;border-radius:8px;display:grid;place-items:center;background:#1e2436;font:700 12px var(--mono);color:var(--muted)}
+.opt code{font-size:13px}
+.opt.right{border-color:var(--green);background:rgba(61,220,151,.12)}
+.opt.right .l{background:var(--green);color:#06210f}
+.opt.wrong{border-color:var(--pink);background:rgba(255,92,138,.12);animation:shake .4s}
+.opt.wrong .l{background:var(--pink);color:#2a0612}
+.opts.done .opt:not(.right):not(.wrong){opacity:.45}
+@keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+.fb{margin-top:12px;font-size:14px;line-height:1.45;color:var(--muted);opacity:0;transform:translateY(8px);transition:.3s}
+.fb.show{opacity:1;transform:none}
+.fb b{color:var(--text)}
+.fb code{background:#1b2131;padding:1px 4px;border-radius:5px;color:#dfe5f5}
+.fb .tag{display:inline-block;font-weight:800;margin-right:4px}
+.qspacer{flex:1}
+.rx{width:100%;display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.rx-row{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.rx-box{flex:1;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:10px 8px;font:11px/1.4 var(--mono);color:#cdd5ea;min-height:62px;display:flex;flex-direction:column;justify-content:center}
+.rx-box .cap{font:700 9px system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.rx-arrow{color:var(--purple);font:700 13px var(--mono);flex:0 0 auto}
+.rx-f{flex:0 0 auto;background:linear-gradient(135deg,rgba(167,139,250,.25),rgba(78,168,255,.2));border:1px solid rgba(167,139,250,.5);border-radius:12px;padding:10px 7px;font:700 12px var(--mono)}
+.rx-ui{background:#f5f6fa;color:#141824;border-radius:14px;padding:9px 10px;font-size:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);min-height:62px}
+.rx-ui .bar{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px}
+.rx-ui .badge{background:#ff5c1a;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px}
+.rx-ui ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px}
+.rx-ui li{background:#e7e9f2;border-radius:6px;padding:3px 6px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flash{animation:flash .9s ease}
+@keyframes flash{0%{box-shadow:0 0 0 3px #3ddc97}100%{box-shadow:0 0 0 0 transparent}}
+.rx-note{font-size:12px;color:var(--dim);text-align:center}
+.btn{all:unset;cursor:pointer;align-self:center;padding:10px 18px;border-radius:999px;background:linear-gradient(135deg,var(--purple),var(--css));color:#fff;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(120,120,255,.35)}
+.btn:active{transform:scale(.96)}
+.btn.ghost{background:transparent;border:1px solid var(--line);box-shadow:none;color:var(--text);align-self:flex-start}
+.flowchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;width:100%}
+.chip{padding:7px 10px;border-radius:10px;font:700 12px var(--mono);color:#0b0e16;display:inline-block}
+.arr{color:var(--dim);font-size:12px}
+.take{list-style:none;padding:0;margin:14px 0 0;display:flex;flex-direction:column;gap:8px;width:100%}
+.take li{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13.5px;line-height:1.4;color:#cfd6ea}
+.take li b{color:#fff}
+.score{font-size:13px;color:var(--muted);margin-top:10px}
+.next-tags{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}
+.next-tags span{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted);font-family:var(--mono)}
+@media (max-height:700px){.visual svg{max-height:230px}.qcode{font-size:12px;padding:8px 10px;margin:4px 0 8px}.opt{padding:10px 12px}.analogy{font-size:13px;padding:8px 10px}p{font-size:15px}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+/* ---- lesson 1b additions ---- */
+.net{width:100%;background:#0d111b;border:1px solid var(--line);border-radius:12px;overflow:hidden;font:10.5px/1.2 var(--mono)}
+.net-h,.net-r{display:grid;grid-template-columns:1.35fr 46px 40px 1fr;gap:6px;align-items:center;padding:6px 9px}
+.net-h{color:var(--dim);font:700 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--line);background:#121622}
+.net-r{border-bottom:1px solid #161b28;color:#cdd5ea}
+.net-r:last-of-type{border-bottom:0}
+.net-r .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.net-r .t{color:var(--muted);font-size:9.5px}
+.net-r .z{color:var(--muted);text-align:right;font-size:9.5px}
+.net-r.dim{color:#59627a}.net-r.dim .t,.net-r.dim .z{color:#454d63}.net-r.dim .wf i{opacity:.35}
+.net-r.hl{background:rgba(78,168,255,.09);box-shadow:inset 3px 0 0 var(--css)}
+.wf{position:relative;height:9px;background:repeating-linear-gradient(90deg,transparent 0 19.6%,#1a2030 19.6% 20%)}
+.wf i{position:absolute;top:0;height:100%;border-radius:3px;left:var(--s);width:var(--w);background:var(--c);transform-origin:left center}
+.active .net-r{animation:rise .4s ease both;animation-delay:var(--d,0s)}
+.active .wf i{animation:growx .5s ease both;animation-delay:calc(var(--d,0s) + .15s)}
+.net-foot{padding:5px 9px;color:var(--dim);font-size:9px;display:flex;justify-content:space-between;border-top:1px solid var(--line);background:#121622}
+.netwrap{width:100%;display:flex;flex-direction:column;gap:10px}
+.cb{width:100%;font:11.5px/1.5 var(--mono);background:#0d111b;border:1px solid var(--line);border-radius:12px;color:#cdd5ea;overflow:hidden}
+.cb pre{margin:0;padding:9px 11px;font-size:11px;white-space:pre;overflow-x:auto;font:inherit}
+.cb-h{display:flex;justify-content:space-between;align-items:center;padding:5px 11px;background:#121622;border-bottom:1px solid var(--line);font:700 9px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.cb-h .tagc{font:700 9.5px var(--mono);letter-spacing:0;text-transform:none;padding:2px 7px;border-radius:999px}
+.k{color:var(--purple)}.s{color:var(--green)}.t{color:var(--html)}.c{color:var(--dim)}.y{color:var(--js)}.bl{color:var(--css)}
+.mk{background:rgba(247,208,70,.18);color:var(--js);border-radius:4px;padding:0 2px}
+.stack{width:100%;display:flex;flex-direction:column;gap:8px}
+.down{align-self:center;color:var(--purple);font:700 13px var(--mono);line-height:1}
+/* phone mock */
+.phone{width:178px;height:300px;border-radius:26px;border:2px solid #2a3145;background:#0b0e16;padding:12px 10px;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.5);flex:0 0 auto;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.url{font:10px var(--mono);background:#181d2b;border-radius:8px;padding:6px 8px;color:var(--muted);white-space:nowrap;overflow:hidden}
+.url b{color:var(--text);font-weight:600}
+.pg{flex:1;border-radius:12px;background:#f3f5fa;padding:10px 9px;display:flex;flex-direction:column;gap:7px;color:#141824;font-size:11px;overflow:hidden;position:relative}
+.pg.blank{background:#fff}
+.pg .ttl{font-weight:800;font-size:12.5px;display:flex;justify-content:space-between;align-items:center}
+.sk{height:30px;border-radius:8px;background:linear-gradient(90deg,#e1e5ee 0,#f0f2f7 40%,#e1e5ee 80%);background-size:250% 100%;animation:shimmer 1.3s linear infinite}
+.sk.sm{height:12px;width:60%}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:-150% 0}}
+.prow{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e3e6ee;border-radius:8px;padding:7px 8px;font-size:10.5px;font-weight:600;color:#141824;cursor:pointer}
+.prow span{font-weight:500;font-size:9px;color:#fff;background:#3ddc97;border-radius:999px;padding:1px 6px}
+.prow span.pl{background:#f7a046}
+.prow.tapme2{box-shadow:0 0 0 0 rgba(255,92,26,.6);animation:ring 1.6s infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,92,26,.55)}70%{box-shadow:0 0 0 8px rgba(255,92,26,0)}100%{box-shadow:0 0 0 0 rgba(255,92,26,0)}}
+.dom{font:10.5px/1.55 var(--mono);color:#cdd5ea;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:10px;flex:1;min-width:0;white-space:pre;overflow:hidden}
+.row2{display:flex;gap:12px;align-items:center;width:100%;justify-content:center}
+.swap-a{animation:none}
+.active .later{animation:fade .5s ease both;animation-delay:var(--d,1.5s)}
+.active .gone{animation:gone .4s ease both;animation-delay:var(--d,1.5s)}
+@keyframes gone{to{opacity:0;height:0;margin:0;padding:0}}
+/* comparison table */
+.vs{width:100%;display:grid;grid-template-columns:76px 1fr 1fr;gap:5px;font-size:12px;line-height:1.3}
+.vs div{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px 8px;color:#cfd6ea}
+.vs .vh{font-weight:800;text-align:center;border:0}
+.vs .vh.code{background:rgba(247,208,70,.14);color:var(--js)}
+.vs .vh.data{background:rgba(61,220,151,.14);color:var(--green)}
+.vs .vl{background:transparent;border:0;color:var(--dim);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;padding:0}
+.trio{width:100%;display:flex;flex-direction:column;gap:7px}
+.trio .cb pre{padding:6px 10px;font-size:10.5px}
+.find{font-size:12px;color:var(--muted);text-align:center}
+.reload{display:inline-block;font:700 10px var(--mono);padding:3px 8px;border-radius:999px;background:rgba(61,220,151,.15);color:var(--green);border:1px solid rgba(61,220,151,.4)}
+.backb{all:unset;cursor:pointer;font-size:10px;color:#4a57c9;font-weight:700}
+.detail .big{font-size:13px;font-weight:800}
+.kv{display:flex;justify-content:space-between;font-size:10px;background:#fff;border-radius:6px;padding:5px 7px;border:1px solid #e3e6ee}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);justify-content:center}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<div class="app">
+<main class="stage" id="stage">
+  <div class="top">
+    <div class="segs" id="segs"></div>
+    <div class="meta"><span><b>Lesson 1b</b> · How a React app loads</span><a href="index.html" style="color:var(--muted);text-decoration:none;margin-left:auto;margin-right:10px">⌂ home</a><span id="count" aria-live="polite">1 / 25</span></div>
+  </div>
+
+  <!-- 1 TITLE -->
+  <section class="card">
+    <div class="visual">
+      <svg viewBox="0 0 320 220" aria-hidden="true" font-family="ui-monospace,Menlo,monospace">
+        <g class="rise"><rect x="20" y="18" width="280" height="30" rx="15" fill="#181d2b" stroke="#2a3145"/>
+          <text x="40" y="38" fill="#3ddc97" font-size="11">🔒</text><text x="58" y="38" fill="#eef1f8" font-size="12" id="typed">procore.com</text>
+          <rect x="146" y="26" width="2" height="15" fill="#4ea8ff" class="pulse"/></g>
+        <g font-size="9" font-weight="700">
+          <g class="rise" style="--d:.4s"><rect x="20" y="66" width="70" height="16" rx="4" fill="#4ea8ff"/><text x="94" y="78" fill="#a3acc2" font-weight="400">GET /  · html</text></g>
+          <g class="rise" style="--d:.7s"><rect x="94" y="92" width="44" height="16" rx="4" fill="#a78bfa"/><rect x="94" y="114" width="96" height="16" rx="4" fill="#f7d046"/><rect x="94" y="136" width="78" height="16" rx="4" fill="#f7d046" opacity=".75"/>
+            <text x="196" y="126" fill="#a3acc2" font-weight="400">bundles · css/js</text></g>
+          <g class="rise" style="--d:1.0s"><rect x="200" y="162" width="56" height="16" rx="4" fill="#3ddc97"/><text x="306" y="194" text-anchor="end" fill="#3ddc97" font-weight="400">/rest/v1.0/projects · json</text></g>
+        </g>
+        <path d="M14 200 H306" stroke="#2a3145"/><text x="14" y="214" fill="#5d6680" font-size="8">0 ms</text><text x="306" y="214" fill="#5d6680" font-size="8" text-anchor="end">page ready</text>
+      </svg>
+    </div>
+    <div class="titlebadge"><i></i>~9 min · 25 cards · 4 quizzes</div>
+    <h1>How a <span class="grad">React app</span> actually loads</h1>
+    <p>One scenario, request by request: you type <b>procore.com</b>, see your projects, and click one.</p>
+    <div class="tapme">Tap the right side or swipe left to start →</div>
+  </section>
+
+  <!-- 2 BRIDGE -->
+  <section class="card">
+    <div class="kicker">Where Lesson 1 left off</div>
+    <div class="visual">
+      <div class="stack">
+        <div class="flowchips">
+          <span class="chip pop" style="background:#cdd5ea">bytes</span><span class="arr">→</span>
+          <span class="chip pop" style="background:var(--html);--d:.1s">DOM</span><span class="arr">+</span>
+          <span class="chip pop" style="background:var(--css);--d:.2s">CSSOM</span><span class="arr">→</span>
+          <span class="chip pop" style="background:var(--pink);--d:.3s">layout</span><span class="arr">→</span>
+          <span class="chip pop" style="background:var(--purple);--d:.4s">paint</span>
+        </div>
+        <div class="down rise" style="--d:.7s">but which bytes, from where, in what order?</div>
+        <svg viewBox="0 0 320 90" aria-hidden="true" class="rise" style="--d:.9s;max-height:110px">
+          <g font-family="ui-monospace,Menlo,monospace" font-size="9" font-weight="700">
+            <rect x="10" y="10" width="64" height="26" rx="7" fill="#13243a" stroke="#4ea8ff"/><text x="42" y="27" text-anchor="middle" fill="#4ea8ff">HTML</text>
+            <rect x="88" y="10" width="64" height="26" rx="7" fill="#2a2510" stroke="#f7d046"/><text x="120" y="27" text-anchor="middle" fill="#f7d046">JS ×2</text>
+            <rect x="166" y="10" width="64" height="26" rx="7" fill="#221d3a" stroke="#a78bfa"/><text x="198" y="27" text-anchor="middle" fill="#a78bfa">CSS</text>
+            <rect x="244" y="10" width="64" height="26" rx="7" fill="#0f2a20" stroke="#3ddc97"/><text x="276" y="27" text-anchor="middle" fill="#3ddc97">JSON</text>
+            <text x="160" y="64" text-anchor="middle" fill="#a3acc2" font-family="system-ui" font-weight="400" font-size="11">a real app = several requests, each with a job</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <h2>Lesson 1 rendered one file. Real apps fetch several.</h2>
+    <p>A React app loads in stages: an almost empty page, then the code, then the data. Knowing those stages is how you debug "why is this page slow or blank?"</p>
+  </section>
+
+  <!-- 3 NETWORK TAB -->
+  <section class="card">
+    <div class="kicker">Your tool · DevTools Network tab</div>
+    <div class="visual"><div class="netwrap"><div class="net" data-show="0,1,2,3,4,6" data-dim="all"></div>
+      <div class="legend"><span><i style="background:#5d6680"></i>connect</span><span><i style="background:#4ea8ff"></i>document</span><span><i style="background:#a78bfa"></i>css</span><span><i style="background:#f7d046"></i>js</span><span><i style="background:#3ddc97"></i>fetch (data)</span></div></div></div>
+    <h2>One row per request, one bar per wait</h2>
+    <p>Each row is an HTTP request, and its bar shows <b>when it started and how long it took</b>. We'll build this waterfall row by row (timings are illustrative).</p>
+    <div class="analogy"><span>Like a <b>distributed trace</b> (Datadog/Zipkin spans), but for one page load in the browser.</span></div>
+  </section>
+
+  <!-- 4 DNS/TLS -->
+  <section class="card">
+    <div class="kicker">Request 0 · Connect</div>
+    <div class="visual">
+      <svg viewBox="0 0 320 200" aria-hidden="true" font-size="10">
+        <g class="rise"><rect x="8" y="70" width="72" height="56" rx="10" fill="#121622" stroke="#2a3145"/><text x="44" y="102" text-anchor="middle" fill="#cdd5ea" font-weight="700">Browser</text></g>
+        <g class="rise" style="--d:.1s"><rect x="124" y="8" width="72" height="40" rx="10" fill="#121622" stroke="#2a3145"/><text x="160" y="32" text-anchor="middle" fill="#cdd5ea" font-weight="700">DNS</text></g>
+        <g class="rise" style="--d:.2s"><rect x="240" y="70" width="72" height="56" rx="10" fill="#121622" stroke="#2a3145"/><text x="276" y="96" text-anchor="middle" fill="#cdd5ea" font-weight="700">Edge /</text><text x="276" y="110" text-anchor="middle" fill="#cdd5ea" font-weight="700">server</text></g>
+        <g font-family="ui-monospace,Menlo,monospace" font-size="8.5">
+          <path class="draw" style="--d:.4s;--len:90" d="M62 70 L124 36" stroke="#5d6680" stroke-width="2" fill="none"/>
+          <text class="fade" style="--d:.5s" x="204" y="24" fill="#a3acc2">① procore.com?</text>
+          <path class="draw" style="--d:.9s;--len:90" d="M124 46 L72 72" stroke="#4ea8ff" stroke-width="2" fill="none" stroke-dasharray="3 3"/>
+          <text class="fade" style="--d:1.0s" x="204" y="38" fill="#4ea8ff">② 203.0.113.10</text>
+          <text class="fade" style="--d:1.0s" x="204" y="50" fill="#5d6680">(example IP)</text>
+          <g class="fade" style="--d:1.4s"><path d="M82 100 H238" stroke="#a78bfa" stroke-width="2" class="flow"/><text x="160" y="94" text-anchor="middle" fill="#a78bfa">TCP handshake</text></g>
+          <g class="fade" style="--d:1.9s"><path d="M82 120 H238" stroke="#3ddc97" stroke-width="2" class="flow"/><text x="160" y="138" text-anchor="middle" fill="#3ddc97">TLS: cert check + keys 🔒</text></g>
+          <g class="rise" style="--d:2.5s"><rect x="60" y="158" width="200" height="30" rx="10" fill="#0f2a20" stroke="#2c7a5a"/><text x="160" y="177" text-anchor="middle" fill="#3ddc97">1 connection, reused for everything</text></g>
+        </g>
+      </svg>
+    </div>
+    <h2>Find the server, open a secure pipe</h2>
+    <p>DNS turns the name into an IP, then TCP and TLS set up an encrypted connection. This costs tens of milliseconds once, and HTTP/2 then <b>reuses that connection</b> for the requests that follow.</p>
+  </section>
+
+  <!-- 5 HTML SHELL -->
+  <section class="card">
+    <div class="kicker">Request 1 · GET / → the HTML shell</div>
+    <div class="visual"><div class="netwrap">
+      <div class="net" data-show="0,1" data-hl="1"></div>
+      <div class="cb rise" style="--d:.6s"><div class="cb-h">response body <span class="tagc" style="background:#13243a;color:#4ea8ff">text/html · 2 kB</span></div>
+<pre><span class="t">&lt;head&gt;</span>
+<span class="t">&lt;link</span> rel=<span class="s">"stylesheet"</span> href=<span class="s">"/main.a71c09.css"</span><span class="t">&gt;</span>
+<span class="t">&lt;script</span> src=<span class="s">"/vendor.8b2e41.js"</span> defer<span class="t">&gt;&lt;/script&gt;</span>
+<span class="t">&lt;script</span> src=<span class="s">"/main.3f9a1c.js"</span> defer<span class="t">&gt;&lt;/script&gt;</span>
+<span class="t">&lt;/head&gt;</span>
+<span class="t">&lt;body&gt;</span>
+  <span class="mk">&lt;div id="root"&gt;&lt;/div&gt;</span>   <span class="c">&lt;!-- that's it --&gt;</span>
+<span class="t">&lt;/body&gt;</span></pre></div>
+    </div></div>
+    <h2>The first response is an almost empty shell</h2>
+    <p>No projects and no buttons: just one empty <code>&lt;div id="root"&gt;</code> plus pointers to the code. A Rails layout or a CDN serving a static <code>index.html</code> can return it.</p>
+  </section>
+
+  <!-- 6 BLANK -->
+  <section class="card">
+    <div class="kicker">What you see right now</div>
+    <div class="visual"><div class="row2">
+      <div class="phone rise"><div class="url">🔒 <b>procore.com</b></div><div class="pg blank"></div></div>
+      <div class="dom rise" style="--d:.3s"><span class="c">// the whole DOM</span>
+<span class="t">html</span>
+ ├ <span class="t">head</span>
+ │  ├ <span class="t">link</span>
+ │  └ <span class="t">script</span> ×2
+ └ <span class="t">body</span>
+    └ <span class="y">div#root</span>
+      <span class="c">(empty)</span></div>
+    </div></div>
+    <h2>A blank page, for now</h2>
+    <p>The DOM is a handful of nodes and nothing is visible yet. If the JS fails to load, it <b>stays blank</b>. That's the core trade-off of client-side rendering.</p>
+  </section>
+
+  <!-- 7 BUNDLES FETCHED -->
+  <section class="card">
+    <div class="kicker">Requests 2–4 · The code</div>
+    <div class="visual"><div class="net" data-show="0,1,2,3,4" data-hl="2,3,4"></div></div>
+    <h2>The browser fetches the bundles</h2>
+    <p>The parser finds the <code>&lt;link&gt;</code> and <code>&lt;script&gt;</code> tags and fetches all three <b>in parallel</b> over the same connection. Because the scripts use <code>defer</code>, they run in order once the HTML is parsed.</p>
+    <div class="analogy"><span>Look at the sizes: the <b>code is ~100× bigger</b> than the HTML. Bundle size is usually the first lever for load time.</span></div>
+  </section>
+
+  <!-- 8 WHAT'S IN A BUNDLE -->
+  <section class="card">
+    <div class="kicker">What is a bundle?</div>
+    <div class="visual">
+      <svg viewBox="0 0 320 220" aria-hidden="true" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="700">
+        <text x="8" y="12" fill="#5d6680" font-family="system-ui" font-size="8.5" letter-spacing="1.2">SOURCE (hundreds of files)</text>
+        <g class="rise" style="--d:.0s"><rect x="8" y="20" width="96" height="18" rx="5" fill="#13243a" stroke="#4ea8ff"/><text x="14" y="32" fill="#4ea8ff">ProjectList.tsx</text></g>
+        <g class="rise" style="--d:.1s"><rect x="8" y="42" width="96" height="18" rx="5" fill="#13243a" stroke="#4ea8ff"/><text x="14" y="54" fill="#4ea8ff">ProjectCard.tsx</text></g>
+        <g class="rise" style="--d:.2s"><rect x="8" y="64" width="96" height="18" rx="5" fill="#13243a" stroke="#4ea8ff"/><text x="14" y="76" fill="#4ea8ff">api/projects.ts</text></g>
+        <g class="rise" style="--d:.3s"><rect x="8" y="86" width="96" height="18" rx="5" fill="#221d3a" stroke="#a78bfa"/><text x="14" y="98" fill="#a78bfa">styles.scss</text></g>
+        <g class="rise" style="--d:.4s"><rect x="8" y="116" width="96" height="18" rx="5" fill="#2a1a14" stroke="#ff7a45"/><text x="14" y="128" fill="#ff7a45">react, react-dom</text></g>
+        <g class="rise" style="--d:.5s"><rect x="8" y="138" width="96" height="18" rx="5" fill="#2a1a14" stroke="#ff7a45"/><text x="14" y="150" fill="#ff7a45">react-router</text></g>
+        <g class="rise" style="--d:.6s"><rect x="8" y="160" width="96" height="18" rx="5" fill="#2a1a14" stroke="#ff7a45"/><text x="14" y="172" fill="#ff7a45">date-fns, …</text></g>
+        <text x="56" y="194" text-anchor="middle" fill="#5d6680" font-family="system-ui" font-weight="400">your code + node_modules</text>
+        <path d="M106 100 H128" stroke="#5d6680" stroke-width="2" class="flow"/>
+        <g class="pop" style="--d:.8s"><rect x="130" y="64" width="72" height="72" rx="14" fill="#181d2b" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="166" y="94" text-anchor="middle" fill="#eef1f8" font-family="system-ui" font-size="10">Webpack</text><text x="166" y="108" text-anchor="middle" fill="#a3acc2" font-family="system-ui" font-weight="400">or Vite</text>
+          <text x="166" y="124" text-anchor="middle" fill="#5d6680" font-weight="400" font-size="7.5">TS→JS · JSX→JS</text></g>
+        <path d="M204 100 H222" stroke="#5d6680" stroke-width="2" class="flow"/>
+        <text x="226" y="40" fill="#5d6680" font-family="system-ui" font-size="8.5" letter-spacing="1.2">OUTPUT</text>
+        <g class="pop" style="--d:1.2s"><rect x="224" y="52" width="92" height="26" rx="6" fill="#f7d046"/><text x="270" y="68" text-anchor="middle" fill="#221a00">main.3f9a1c.js</text></g>
+        <g class="pop" style="--d:1.35s"><rect x="224" y="86" width="92" height="26" rx="6" fill="#f7d046" opacity=".8"/><text x="270" y="102" text-anchor="middle" fill="#221a00">vendor.8b2e41.js</text></g>
+        <g class="pop" style="--d:1.5s"><rect x="224" y="120" width="92" height="26" rx="6" fill="#a78bfa"/><text x="270" y="136" text-anchor="middle" fill="#160a33">main.a71c09.css</text></g>
+        <text class="fade" style="--d:1.8s" x="270" y="164" text-anchor="middle" fill="#a3acc2" font-family="system-ui" font-weight="400">minified, few files</text>
+      </svg>
+    </div>
+    <h2>Hundreds of source files, compiled into a few bundles</h2>
+    <p>At build time, a bundler compiles TypeScript and JSX into plain JS (browsers can't run TS), pulls in libraries, then minifies. Vendor code is often split out because it changes less often.</p>
+    <div class="analogy"><span>Like <code>rails assets:precompile</code> or building a <b>fat JAR</b>: many sources become a few deployable artifacts.</span></div>
+  </section>
+
+  <!-- 9 HASHES + CDN -->
+  <section class="card">
+    <div class="kicker">Hashed filenames + CDN</div>
+    <div class="visual">
+      <svg viewBox="0 0 320 210" aria-hidden="true" font-family="ui-monospace,Menlo,monospace" font-size="9">
+        <g class="rise"><rect x="8" y="20" width="70" height="44" rx="10" fill="#121622" stroke="#2a3145"/><text x="43" y="46" text-anchor="middle" fill="#cdd5ea" font-weight="700" font-family="system-ui">Browser</text></g>
+        <g class="rise" style="--d:.1s"><rect x="124" y="20" width="72" height="44" rx="10" fill="#121622" stroke="#4ea8ff"/><text x="160" y="40" text-anchor="middle" fill="#4ea8ff" font-weight="700" font-family="system-ui">CDN edge</text><text x="160" y="54" text-anchor="middle" fill="#5d6680" font-family="system-ui">near you</text></g>
+        <g class="rise" style="--d:.2s"><rect x="242" y="20" width="70" height="44" rx="10" fill="#121622" stroke="#2a3145"/><text x="277" y="46" text-anchor="middle" fill="#cdd5ea" font-weight="700" font-family="system-ui">Origin</text></g>
+        <path d="M80 42 H122 M198 42 H240" stroke="#3a4360" stroke-width="2" class="flow"/>
+        <g class="rise" style="--d:.6s"><rect x="8" y="80" width="304" height="46" rx="10" fill="#0d111b" stroke="#2a3145"/>
+          <text x="18" y="98" fill="#f7d046">main.3f9a1c.js</text><text x="302" y="98" text-anchor="end" fill="#3ddc97">HIT ✓</text>
+          <text x="18" y="115" fill="#a3acc2">Cache-Control: public, max-age=31536000, immutable</text></g>
+        <g class="rise" style="--d:1.2s"><text x="160" y="146" text-anchor="middle" fill="#ff7a45" font-family="system-ui" font-weight="700">deploy → content changed → new hash → new URL</text></g>
+        <g class="rise" style="--d:1.6s"><rect x="8" y="156" width="304" height="46" rx="10" fill="#0d111b" stroke="#2a3145"/>
+          <text x="18" y="174" fill="#f7d046">main.<tspan fill="#ff7a45">7d20be</tspan>.js</text><text x="302" y="174" text-anchor="end" fill="#ff7a45">MISS once</text>
+          <text x="18" y="191" fill="#a3acc2">HTML shell: Cache-Control: no-cache</text></g>
+      </svg>
+    </div>
+    <h2>The filename is the version</h2>
+    <p>The hash is computed from the file's contents, so bundles can be cached for a year at the CDN and in the browser. A deploy produces new names, and the short-cached HTML shell points to them.</p>
+    <div class="analogy"><span><b>Content-addressed</b>, like a git SHA or a Docker image digest: same bytes, same name.</span></div>
+  </section>
+
+  <!-- 10 QUIZ 1 -->
+  <section class="card quiz" data-quiz>
+    <div class="kicker">Quiz 1 / 4 · Caching</div>
+    <h2>Why is it <code>main.3f9a1c.js</code> and not just <code>main.js</code>?</h2>
+    <div class="qspacer"></div>
+    <div class="opts">
+      <button class="opt" type="button" data-ok="0"><span class="l">A</span>To hide the code from attackers</button>
+      <button class="opt" type="button" data-ok="1"><span class="l">B</span>So it can be cached "forever", and a deploy changes the URL</button>
+      <button class="opt" type="button" data-ok="0"><span class="l">C</span>Each user gets a unique build</button>
+    </div>
+    <div class="fb" data-right="The content hash makes the URL immutable. Browsers and CDNs can cache it for a year, and new code always arrives under a new name, so you never need to purge a cache." data-wrong="It's <b>B</b>. The hash comes from the file's contents, so the URL is immutable: cache it forever, and new code means a new URL. Bundles are the same for every user and aren't secret (anyone can read them)."></div>
+    <div class="qspacer"></div>
+  </section>
+
+  <!-- 11 MODULE FEDERATION -->
+  <section class="card">
+    <div class="kicker">Aside · Module Federation (light)</div>
+    <div class="visual">
+      <svg viewBox="0 0 320 210" aria-hidden="true" font-family="ui-monospace,Menlo,monospace" font-size="9" font-weight="700">
+        <g class="pop"><rect x="8" y="30" width="150" height="150" rx="14" fill="#121622" stroke="#4ea8ff" stroke-width="1.5"/>
+          <text x="20" y="48" fill="#4ea8ff" font-family="system-ui">Host app (shell)</text>
+          <rect x="20" y="58" width="126" height="18" rx="5" fill="#181d2b"/><text x="28" y="70" fill="#a3acc2" font-weight="400">nav · auth · router</text>
+          <rect x="20" y="84" width="126" height="84" rx="8" fill="none" stroke="#a78bfa" stroke-dasharray="4 3"/>
+          <text x="83" y="122" text-anchor="middle" fill="#5d6680" font-weight="400" font-family="system-ui">slot for</text><text x="83" y="136" text-anchor="middle" fill="#5d6680" font-weight="400" font-family="system-ui">RFIs module</text>
+          <rect class="pop" style="--d:2.2s" x="24" y="88" width="118" height="76" rx="7" fill="#221d3a" stroke="#a78bfa"/>
+          <text class="fade" style="--d:2.4s" x="83" y="130" text-anchor="middle" fill="#a78bfa">RFIs UI ✓</text></g>
+        <g class="pop" style="--d:.3s"><rect x="196" y="30" width="116" height="150" rx="14" fill="#121622" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="208" y="48" fill="#a78bfa" font-family="system-ui">RFI team deploy</text>
+          <rect x="208" y="62" width="92" height="24" rx="6" fill="#f7d046"/><text x="254" y="78" text-anchor="middle" fill="#221a00">remoteEntry.js</text>
+          <rect x="208" y="96" width="92" height="20" rx="6" fill="#f7d046" opacity=".6"/><text x="254" y="110" text-anchor="middle" fill="#221a00">rfis.91ac.js</text>
+          <text x="254" y="150" text-anchor="middle" fill="#5d6680" font-weight="400" font-family="system-ui">own repo, own release</text></g>
+        <g font-family="system-ui" font-weight="400" font-size="8.5">
+          <path class="draw" style="--d:.8s;--len:60" d="M160 74 H206" stroke="#f7d046" stroke-width="2" fill="none"/><text class="fade" style="--d:.9s" x="178" y="22" text-anchor="middle" fill="#f7d046">① fetch manifest</text>
+          <path class="draw" style="--d:1.5s;--len:60" d="M206 106 H160" stroke="#f7d046" stroke-width="2" fill="none"/><text class="fade" style="--d:1.6s" x="178" y="200" text-anchor="middle" fill="#f7d046">② load chunk at runtime → mount</text>
+        </g>
+      </svg>
+    </div>
+    <h2>Where <code>remoteEntry.js</code> fits</h2>
+    <p>With Module Federation, the host's bundle fetches a small <code>remoteEntry.js</code> manifest from another team's deploy at runtime, then loads only the chunks it needs. It's just <b>more JS requests</b> in the same waterfall. The details come in a later lesson.</p>
+  </section>
+
+  <!-- 12 MOUNT -->
+  <section class="card">
+    <div class="kicker">The JS runs · React mounts</div>
+    <div class="visual"><div class="stack">
+      <div class="cb rise"><div class="cb-h">main.tsx (before bundling)</div>
+<pre><span class="k">const</span> el = document.getElementById(<span class="s">'root'</span>);
+<span class="y">createRoot</span>(el).render(<span class="t">&lt;App /&gt;</span>);</pre></div>
+      <svg viewBox="0 0 320 130" aria-hidden="true" font-family="ui-monospace,Menlo,monospace" font-size="9.5" font-weight="700" style="max-height:170px">
+        <rect x="10" y="6" width="300" height="118" rx="12" fill="none" stroke="#f7d046" stroke-dasharray="5 4"/>
+        <text x="20" y="22" fill="#f7d046">div#root</text>
+        <g class="pop" style="--d:.5s"><rect x="24" y="30" width="272" height="86" rx="10" fill="#13243a" stroke="#4ea8ff"/><text x="34" y="45" fill="#4ea8ff">&lt;App&gt;</text></g>
+        <g class="pop" style="--d:.8s"><rect x="36" y="52" width="70" height="56" rx="8" fill="#221d3a" stroke="#a78bfa"/><text x="44" y="66" fill="#a78bfa">&lt;Nav&gt;</text></g>
+        <g class="pop" style="--d:1.0s"><rect x="114" y="52" width="170" height="56" rx="8" fill="#0f2a20" stroke="#3ddc97"/><text x="122" y="66" fill="#3ddc97">&lt;ProjectsPage&gt;</text></g>
+        <g class="pop" style="--d:1.3s"><rect x="122" y="74" width="154" height="10" rx="5" fill="#2a3247"/><rect x="122" y="90" width="110" height="10" rx="5" fill="#2a3247"/></g>
+      </svg>
+    </div></div>
+    <h2>React takes over <code>#root</code></h2>
+    <p>Once the bundles run, React renders your component tree and creates real DOM nodes inside the empty div. From now on, <b>React owns everything inside <code>#root</code></b>.</p>
+  </section>
+  <!-- 13 SKELETON -->
+  <section class="card">
+    <div class="kicker">First render · no data yet</div>
+    <div class="visual"><div class="row2">
+      <div class="phone rise"><div class="url">🔒 <b>procore.com</b></div>
+        <div class="pg"><div class="ttl">Projects <span class="sk sm" style="width:30px;height:12px"></span></div>
+          <div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div></div>
+      <div class="dom rise" style="--d:.3s;font-size:10px"><span class="k">if</span> (!projects)
+  <span class="k">return</span> <span class="t">&lt;Skeleton/&gt;</span>;
+
+<span class="c">// render() runs</span>
+<span class="c">// before the data</span>
+<span class="c">// exists, so show</span>
+<span class="c">// placeholders</span></div>
+    </div></div>
+    <h2>Skeleton first, data second</h2>
+    <p>React renders immediately with what it has, which is no data yet. A good component shows a <b>skeleton or spinner</b> instead of an empty screen or a crash on <code>undefined</code>.</p>
+    <div class="analogy"><span>When reviewing AI code, check that every data-driven component handles <b>loading, error and empty</b> states.</span></div>
+  </section>
+
+  <!-- 14 FETCH -->
+  <section class="card">
+    <div class="kicker">Request 5 · The data</div>
+    <div class="visual"><div class="stack">
+      <div class="cb rise"><div class="cb-h">ProjectsPage.tsx</div>
+<pre><span class="k">const</span> [projects, setProjects] = <span class="y">useState</span>(<span class="k">null</span>);
+<span class="y">useEffect</span>(() =&gt; {  <span class="c">// runs after 1st render</span>
+  fetch(<span class="s">'/rest/v1.0/projects'</span>)
+    .then(r =&gt; r.json())
+    .then(setProjects);
+}, []);</pre></div>
+      <div class="cb rise" style="--d:.5s"><div class="cb-h">request on the wire <span class="tagc" style="background:#0f2a20;color:#3ddc97">fetch / XHR</span></div>
+<pre><span class="bl">GET</span> /rest/v1.0/projects  <span class="c">← example endpoint</span>
+Accept: application/json
+Cookie: _session=9f2c…  <span class="c">← sent automatically</span>
+<span class="c"># or Authorization: Bearer eyJhbG…</span></pre></div>
+    </div></div>
+    <h2>A hook asks your API for data</h2>
+    <p>After the first render, an effect (or a data hook like React Query's <code>useQuery</code>) calls <code>fetch</code>. It's an ordinary HTTP request carrying the user's <b>session cookie or bearer token</b>, exactly what your Rails controllers already authenticate.</p>
+  </section>
+
+  <!-- 15 JSON RESPONSE -->
+  <section class="card">
+    <div class="kicker">Rails answers with JSON only</div>
+    <div class="visual"><div class="stack">
+      <div class="cb rise"><div class="cb-h">projects_controller.rb (illustrative)</div>
+<pre><span class="k">def</span> <span class="y">index</span>
+  render <span class="bl">json:</span> current_user.projects
+<span class="k">end</span></pre></div>
+      <div class="cb rise" style="--d:.4s"><div class="cb-h">response <span class="tagc" style="background:#0f2a20;color:#3ddc97">application/json · 4 kB</span></div>
+<pre>[{ <span class="s">"id"</span>: <span class="y">42</span>, <span class="s">"name"</span>: <span class="s">"Riverside Tower"</span>,
+   <span class="s">"status"</span>: <span class="s">"active"</span> },
+ { <span class="s">"id"</span>: <span class="y">43</span>, … }]</pre></div>
+      <div class="net" data-show="0,1,2,3,4,6" data-hl="6" data-foot="data waits for code ↑"></div>
+    </div></div>
+    <h2>No HTML, just data</h2>
+    <p>The API returns JSON and has no idea what the page looks like. Notice that the data request <b>starts late</b>: it can't begin until the JS has downloaded, run and rendered.</p>
+  </section>
+
+  <!-- 16 CODE VS DATA -->
+  <section class="card">
+    <div class="kicker">The key distinction</div>
+    <div class="visual">
+      <div class="vs">
+        <div class="vl"></div><div class="vh code pop">CODE request</div><div class="vh data pop" style="--d:.1s">DATA request</div>
+        <div class="vl">e.g.</div><div class="rise" style="--d:.2s"><code>main.3f9a1c.js</code>, css</div><div class="rise" style="--d:.25s"><code>/rest/v1.0/projects</code></div>
+        <div class="vl">who</div><div class="rise" style="--d:.4s">Same bytes for <b>every user</b></div><div class="rise" style="--d:.45s">Different <b>per user</b> &amp; per moment</div>
+        <div class="vl">changes</div><div class="rise" style="--d:.6s">Only on deploy</div><div class="rise" style="--d:.65s">Every request</div>
+        <div class="vl">cache</div><div class="rise" style="--d:.8s">CDN + browser, ~1 year</div><div class="rise" style="--d:.85s"><code>private</code> / <code>no-store</code></div>
+        <div class="vl">auth</div><div class="rise" style="--d:1.0s">None, it's public</div><div class="rise" style="--d:1.05s">Cookie or token</div>
+        <div class="vl">served by</div><div class="rise" style="--d:1.2s">CDN / static host</div><div class="rise" style="--d:1.25s">Rails / Java API</div>
+      </div>
+    </div>
+    <h2>Code is static. Data is personal.</h2>
+    <p>Every SPA page load mixes the two. Keeping them apart in your head explains caching, auth and most "why is this slow?" questions.</p>
+    <div class="analogy"><span>Code ≈ a <b>deployed artifact</b> (JAR, gem). Data ≈ your <b>API responses</b>. Never put secrets or per-user data in the bundle: anyone can read it.</span></div>
+  </section>
+
+  <!-- 17 QUIZ 2 -->
+  <section class="card quiz" data-quiz>
+    <div class="kicker">Quiz 2 / 4 · Code vs data</div>
+    <h2>Which response can a shared CDN safely cache and serve to <i>all</i> users?</h2>
+    <div class="qspacer"></div>
+    <div class="opts">
+      <button class="opt" type="button" data-ok="0"><span class="l">A</span><code>GET /rest/v1.0/projects</code></button>
+      <button class="opt" type="button" data-ok="1"><span class="l">B</span><code>GET /vendor.8b2e41.js</code></button>
+      <button class="opt" type="button" data-ok="0"><span class="l">C</span><code>GET /rest/v1.0/me</code></button>
+    </div>
+    <div class="fb" data-right="A hashed bundle is identical for everyone and never changes. The two API calls return different data per user, and caching them in a shared cache would leak one user's projects to another." data-wrong="It's <b>B</b>. The hashed bundle is the same for everyone. Both API calls are per-user data, and a shared cache could serve your projects to someone else."></div>
+    <div class="qspacer"></div>
+  </section>
+
+  <!-- 18 STATE → JSX → DOM -->
+  <section class="card">
+    <div class="kicker">JSON → state → JSX → DOM</div>
+    <div class="visual"><div class="stack">
+      <div class="cb rise"><pre><span class="y">setProjects</span>(json)  <span class="c">// state changed → re-render</span></pre></div>
+      <div class="down fade" style="--d:.4s">↓</div>
+      <div class="cb rise" style="--d:.5s"><pre><span class="k">return</span> <span class="t">&lt;ul&gt;</span>{projects.<span class="y">map</span>(p =&gt;
+  <span class="t">&lt;li</span> key={p.id}<span class="t">&gt;</span>{p.name}<span class="t">&lt;/li&gt;</span>
+)}<span class="t">&lt;/ul&gt;</span>;</pre></div>
+      <div class="down fade" style="--d:1s">↓ React diffs &amp; commits DOM nodes</div>
+      <div class="pg" style="flex:0 0 auto">
+        <div class="ttl">Projects <span class="reload pop" style="--d:2.1s">2 new li</span></div>
+        <div class="sk gone" style="--d:1.3s"></div>
+        <div class="sk gone" style="--d:1.3s"></div>
+        <div class="prow pop" style="--d:1.6s">Riverside Tower <span>active</span></div>
+        <div class="prow pop" style="--d:1.8s">Mercy Hospital Wing <span class="pl">bidding</span></div>
+      </div>
+    </div></div>
+    <h2>Data becomes UI in the browser</h2>
+    <p>Setting state triggers a re-render. Your component maps the array to JSX, React diffs the result against the skeleton, and it <b>creates only the DOM nodes that changed</b>, just like Lesson 1's virtual DOM card.</p>
+  </section>
+
+  <!-- 19 SIDE BY SIDE -->
+  <section class="card">
+    <div class="kicker">Side by side · three responses</div>
+    <div class="visual"><div class="trio">
+      <div class="cb rise"><div class="cb-h">① HTML <span class="tagc" style="background:#13243a;color:#4ea8ff">2 kB · everyone</span></div>
+<pre><span class="t">&lt;div</span> id=<span class="s">"root"</span><span class="t">&gt;&lt;/div&gt;</span>
+<span class="t">&lt;script</span> src=<span class="s">"/main.3f9a1c.js"</span><span class="t">&gt;</span></pre></div>
+      <div class="cb rise" style="--d:.3s"><div class="cb-h">② JS bundle <span class="tagc" style="background:#2a2510;color:#f7d046">230 kB · everyone · cached</span></div>
+<pre><span class="c">/* minified ProjectsPage */</span>
+<span class="k">function</span> Xe(){<span class="k">const</span>[t,n]=(0,r.useState)(<span class="k">null</span>);(0,r.useEffect)(()=&gt;{fetch(<span class="s">"/rest/v1.0/projects"</span>)…</pre></div>
+      <div class="cb rise" style="--d:.6s"><div class="cb-h">③ JSON <span class="tagc" style="background:#0f2a20;color:#3ddc97">4 kB · per user</span></div>
+<pre>[{<span class="s">"id"</span>:<span class="y">42</span>,<span class="s">"name"</span>:<span class="mk">"Riverside Tower"</span>,<span class="s">"status"</span>:<span class="s">"active"</span>},…]</pre></div>
+      <div class="find fade" style="--d:1s">🔎 Search all three for "Riverside Tower": it's <b style="color:var(--green)">only in the JSON</b>.</div>
+    </div></div>
+    <h2>Structure, behavior, data</h2>
+    <p>The HTML is a <b>launcher</b>, the JS is the <b>whole UI program</b>, and the JSON is <b>this user's data</b>. "View source" on an SPA shows almost nothing for this reason.</p>
+  </section>
+
+  <!-- 20 CLIENT-SIDE ROUTING (interactive) -->
+  <section class="card" id="routeCard">
+    <div class="kicker">Clicking a project · client-side routing</div>
+    <div class="visual"><div class="stack">
+      <div class="phone" style="width:100%;height:178px">
+        <div class="url" id="rtUrl">🔒 <b>procore.com</b>/</div>
+        <div class="pg" id="rtPage"></div>
+      </div>
+      <div class="net" id="rtNet"></div>
+    </div></div>
+    <h2>New URL, no page reload</h2>
+    <p>The router intercepts the click and calls <code>history.pushState</code>, so the URL changes but the page and its JS stay loaded. React swaps components, and the only new request is <b>JSON for project 42</b>.</p>
+  </section>
+
+  <!-- 21 QUIZ 3 -->
+  <section class="card quiz" data-quiz>
+    <div class="kicker">Quiz 3 / 4 · Routing</div>
+    <h2>After clicking a project in the SPA, what new rows appear in the Network tab?</h2>
+    <div class="qspacer"></div>
+    <div class="opts">
+      <button class="opt" type="button" data-ok="0"><span class="l">A</span>A new HTML document, then all bundles again</button>
+      <button class="opt" type="button" data-ok="1"><span class="l">B</span>A JSON fetch (maybe a lazy-loaded code chunk), with no document</button>
+      <button class="opt" type="button" data-ok="0"><span class="l">C</span>None: React already has every project's details</button>
+    </div>
+    <div class="fb" data-right="The bundles are already loaded and running. The router renders a new component, which fetches just the data it needs. Big apps may also lazy-load a code chunk for the new route the first time." data-wrong="It's <b>B</b>. With pushState there's no new document. The new route's component fetches its own JSON, and sometimes a lazy-loaded chunk the first time you visit that route."></div>
+    <div class="qspacer"></div>
+  </section>
+
+  <!-- 22 VS ERB -->
+  <section class="card">
+    <div class="kicker">Compare · classic Rails ERB page</div>
+    <div class="visual">
+      <svg viewBox="0 0 320 220" aria-hidden="true" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="700">
+        <text x="8" y="14" fill="#ff7a45" font-family="system-ui" font-size="10">Rails ERB (server-rendered)</text>
+        <rect class="growx" x="8" y="24" width="142" height="16" rx="4" fill="#4ea8ff"/><text class="fade" x="14" y="35" fill="#00122a">GET /projects  (DB + ERB)</text>
+        <rect class="growx" style="--d:.5s" x="152" y="24" width="28" height="16" rx="4" fill="#a78bfa"/>
+        <g class="pop" style="--d:.8s"><circle cx="190" cy="32" r="6" fill="#3ddc97"/></g><text class="fade" style="--d:.8s" x="200" y="35" fill="#3ddc97">content!</text>
+        <text class="fade" style="--d:1s" x="8" y="56" fill="#5d6680" font-weight="400">click →</text>
+        <rect class="growx" style="--d:1.1s" x="44" y="48" width="150" height="16" rx="4" fill="#4ea8ff"/><text class="fade" style="--d:1.2s" x="50" y="59" fill="#00122a">GET /projects/42 (full page)</text>
+        <text class="fade" style="--d:1.5s" x="200" y="59" fill="#ff5c8a">⟳ reload, state lost</text>
+        <path d="M8 80 H312" stroke="#2a3145"/>
+        <text x="8" y="100" fill="#4ea8ff" font-family="system-ui" font-size="10">React SPA (client-rendered)</text>
+        <rect class="growx" style="--d:1.8s" x="8" y="110" width="36" height="16" rx="4" fill="#4ea8ff"/><text class="fade" style="--d:1.8s" x="12" y="121" fill="#00122a">shell</text>
+        <rect class="growx" style="--d:2.0s" x="46" y="110" width="100" height="16" rx="4" fill="#f7d046"/><text class="fade" style="--d:2.1s" x="52" y="121" fill="#221a00">JS bundles</text>
+        <rect class="growx" style="--d:2.4s" x="148" y="110" width="44" height="16" rx="4" fill="#3ddc97"/><text class="fade" style="--d:2.4s" x="152" y="121" fill="#06210f">JSON</text>
+        <g class="pop" style="--d:2.7s"><circle cx="202" cy="118" r="6" fill="#3ddc97"/></g><text class="fade" style="--d:2.7s" x="212" y="121" fill="#3ddc97">content!</text>
+        <text class="fade" style="--d:2.9s" x="8" y="142" fill="#5d6680" font-weight="400">click →</text>
+        <rect class="growx" style="--d:3.0s" x="44" y="134" width="30" height="16" rx="4" fill="#3ddc97"/><text class="fade" style="--d:3.1s" x="80" y="145" fill="#3ddc97">only JSON, instant swap ⚡</text>
+        <g class="rise" style="--d:3.4s" font-family="system-ui" font-weight="400" font-size="9.5">
+          <rect x="8" y="164" width="148" height="50" rx="10" fill="#1a120e" stroke="#5c3a28"/>
+          <text x="16" y="182" fill="#ff7a45" font-weight="700">ERB</text><text x="16" y="196" fill="#a3acc2">HTML already has data</text><text x="16" y="208" fill="#a3acc2">every click = full page</text>
+          <rect x="164" y="164" width="148" height="50" rx="10" fill="#0f1a2c" stroke="#28466e"/>
+          <text x="172" y="182" fill="#4ea8ff" font-weight="700">SPA</text><text x="172" y="196" fill="#a3acc2">slower first content</text><text x="172" y="208" fill="#a3acc2">fast, app-like after that</text>
+        </g>
+      </svg>
+    </div>
+    <h2>Where the HTML gets built</h2>
+    <p>With ERB, Rails queries the database and returns <b>HTML with the data already in it</b>. In the SPA, Rails returns JSON and the browser builds the HTML. Same data, different place.</p>
+  </section>
+
+  <!-- 23 SSR -->
+  <section class="card">
+    <div class="kicker">Briefly · SSR (server-side rendering)</div>
+    <div class="visual">
+      <svg viewBox="0 0 320 170" aria-hidden="true" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="700">
+        <text x="8" y="14" fill="#a78bfa" font-family="system-ui" font-size="10">React SSR (e.g. Next.js)</text>
+        <rect class="growx" x="8" y="26" width="104" height="18" rx="4" fill="#4ea8ff"/><text class="fade" x="14" y="38" fill="#00122a">HTML with data in it</text>
+        <g class="pop" style="--d:.6s"><circle cx="120" cy="35" r="6" fill="#3ddc97"/></g>
+        <text class="fade" style="--d:.6s" x="110" y="62" fill="#3ddc97" text-anchor="middle">visible</text>
+        <rect class="growx" style="--d:.8s" x="114" y="78" width="110" height="18" rx="4" fill="#f7d046"/><text class="fade" style="--d:.9s" x="120" y="90" fill="#221a00">same JS bundles</text>
+        <rect class="growx" style="--d:1.4s" x="226" y="78" width="46" height="18" rx="4" fill="#a78bfa"/><text class="fade" style="--d:1.5s" x="230" y="90" fill="#160a33">hydrate</text>
+        <g class="pop" style="--d:1.9s"><circle cx="282" cy="87" r="6" fill="#a78bfa"/></g>
+        <text class="fade" style="--d:1.9s" x="282" y="112" fill="#a78bfa" text-anchor="middle">interactive</text>
+        <g class="rise" style="--d:2.2s" font-family="system-ui" font-weight="400" font-size="10">
+          <rect x="8" y="124" width="304" height="40" rx="10" fill="#121622" stroke="#2a3145"/>
+          <text x="160" y="140" text-anchor="middle" fill="#cdd5ea">ERB's fast first paint + SPA's smooth navigation</text>
+          <text x="160" y="155" text-anchor="middle" fill="#5d6680">…paid for with a Node server and more moving parts</text>
+        </g>
+      </svg>
+    </div>
+    <h2>SSR: render React on the server first</h2>
+    <p>The server runs your React components and sends <b>real HTML with data</b>, so content shows up quickly. The bundle then <b>hydrates</b> that HTML, attaching React and its event handlers. Before hydration finishes, the page looks ready but clicks don't work yet.</p>
+  </section>
+
+  <!-- 24 QUIZ 4 -->
+  <section class="card quiz" data-quiz>
+    <div class="kicker">Quiz 4 / 4 · Who builds the HTML?</div>
+    <h2>In our client-rendered SPA, where does the <code>&lt;li&gt;Riverside Tower&lt;/li&gt;</code> HTML come from?</h2>
+    <div class="qspacer"></div>
+    <div class="opts">
+      <button class="opt" type="button" data-ok="0"><span class="l">A</span>A Rails ERB partial renders it</button>
+      <button class="opt" type="button" data-ok="1"><span class="l">B</span>React builds it in the browser from the JSON</button>
+      <button class="opt" type="button" data-ok="0"><span class="l">C</span>It's baked into the cached JS bundle</button>
+    </div>
+    <div class="fb" data-right="Rails only sent <code>{&quot;name&quot;:&quot;Riverside Tower&quot;}</code>. The bundle holds the <i>template</i> (the map → li code), and React combines the two into DOM nodes at runtime." data-wrong="It's <b>B</b>. Rails sent only JSON, and the bundle contains the <i>code</i> that maps data to elements but not the data. React builds the DOM nodes in the browser at runtime."></div>
+    <div class="qspacer"></div>
+  </section>
+
+  <!-- 25 RECAP -->
+  <section class="card">
+    <div class="kicker">Recap · the full waterfall</div>
+    <div class="visual"><div class="net" data-show="0,1,2,3,4,6,7" data-foot="← initial load · click →"></div></div>
+    <ul class="take" style="margin-top:0">
+      <li class="rise" style="--d:.6s"><b>HTML shell → code → data.</b> The page is blank until JS runs, and the data waits for the code.</li>
+      <li class="rise" style="--d:.8s"><b>Code</b> is static and hashed, cached for a year, and the same for everyone. <b>Data</b> is per-user JSON and never shared-cached.</li>
+      <li class="rise" style="--d:1.0s"><b>React builds the DOM</b> from JSON; navigation is <code>pushState</code> plus a JSON fetch, with no reload.</li>
+    </ul>
+    <div class="score" id="score"></div>
+    <p style="font-size:13px;margin-top:8px">Next up: <b>Lesson 2</b>, HTML semantics, the box model, Flexbox &amp; Grid.</p>
+    <button class="btn ghost" id="restart" type="button" style="margin-top:4px">↺ Restart lesson</button>
+  </section>
+
+  <div class="bottom">
+    <button class="nav" id="prev" type="button" aria-label="Previous card">‹</button>
+    <span class="hint">tap · swipe · ← →</span>
+    <button class="nav" id="next" type="button" aria-label="Next card">›</button>
+  </div>
+</main>
+</div>
+<script>
+(function(){
+  "use strict";
+  // ---- simplified DevTools Network rows: [name, type, size, start%, width%, color] (illustrative)
+  var NET = [
+    ['procore.com','connect','—',0,13,'#5d6680'],
+    ['/ (procore.com)','document','2.1 kB',13,12,'#4ea8ff'],
+    ['main.a71c09.css','css','31 kB',27,10,'#a78bfa'],
+    ['vendor.8b2e41.js','script','142 kB',27,26,'#f7d046'],
+    ['main.3f9a1c.js','script','88 kB',27,20,'#f7d046'],
+    ['remoteEntry.js','script','3 kB',55,6,'#f7d046'],
+    ['v1.0/projects','fetch','4.2 kB',62,15,'#3ddc97'],
+    ['v1.0/projects/42','fetch','1.1 kB',90,8,'#3ddc97']
+  ];
+  function netHTML(show, hl, dimAll, foot){
+    var h='<div class="net-h"><span>Name</span><span>Type</span><span style="text-align:right">Size</span><span>Waterfall</span></div>';
+    show.forEach(function(i,k){
+      var r=NET[i], cls = dimAll ? 'dim' : (hl ? (hl.indexOf(i)>=0 ? 'hl' : 'dim') : '');
+      h+='<div class="net-r '+cls+'" style="--d:'+(k*0.12).toFixed(2)+'s"><span class="n">'+r[0]+'</span><span class="t">'+r[1]+'</span><span class="z">'+r[2]+'</span><span class="wf"><i style="--s:'+r[3]+'%;--w:'+r[4]+'%;--c:'+r[5]+'"></i></span></div>';
+    });
+    h+='<div class="net-foot"><span>'+show.length+' requests</span><span>'+(foot||'illustrative timings')+'</span></div>';
+    return h;
+  }
+  function nums(s){ return s ? s.split(',').map(Number) : null; }
+  Array.prototype.forEach.call(document.querySelectorAll('.net[data-show]'), function(el){
+    el.innerHTML = netHTML(nums(el.getAttribute('data-show')), nums(el.getAttribute('data-hl')), el.getAttribute('data-dim')==='all', el.getAttribute('data-foot'));
+  });
+
+  var stage = document.getElementById('stage');
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.card'));
+  var segsEl = document.getElementById('segs'), countEl = document.getElementById('count');
+  var prevBtn = document.getElementById('prev'), nextBtn = document.getElementById('next');
+  var cur = 0, N = cards.length, answered = 0, correct = 0, NQ = document.querySelectorAll('[data-quiz]').length;
+  cards.forEach(function(){ var s=document.createElement('div'); s.className='seg'; s.appendChild(document.createElement('i')); segsEl.appendChild(s); });
+  var segs = segsEl.children;
+
+  function go(n){
+    n = Math.max(0, Math.min(N-1, n));
+    cards.forEach(function(c,k){ c.classList.toggle('past', k<n); if(k!==n) c.classList.remove('active'); c.setAttribute('aria-hidden', k!==n); });
+    var card = cards[n];
+    card.classList.remove('active'); void card.offsetWidth; card.classList.add('active');
+    for (var k=0;k<N;k++) segs[k].classList.toggle('done', k<=n);
+    countEl.textContent = (n+1)+' / '+N;
+    prevBtn.disabled = n===0; nextBtn.disabled = n===N-1;
+    cur=n; try{var _k='lp:'+location.pathname.split('/').pop(),_o=JSON.parse(localStorage.getItem(_k)||'{}');localStorage.setItem(_k,JSON.stringify({max:Math.max(_o.max||0,n+1),total:N}));}catch(_e){} updateScore();
+    if (card.id==='routeCard') routeReset(true); else clearTimeout(autoT);
+    try { history.replaceState(null,'','#'+(n+1)); } catch(e){}
+  }
+  function next(){ if(cur<N-1) go(cur+1); }
+  function prev(){ if(cur>0) go(cur-1); }
+  prevBtn.addEventListener('click', function(e){ e.stopPropagation(); prev(); });
+  nextBtn.addEventListener('click', function(e){ e.stopPropagation(); next(); });
+  document.getElementById('restart').addEventListener('click', function(e){ e.stopPropagation(); go(0); });
+
+  var lastSwipe = 0;
+  stage.addEventListener('click', function(e){
+    if (Date.now()-lastSwipe < 450) return;
+    if (e.target.closest('button, a, .opts, #routeCard .phone')) return;
+    var rect = stage.getBoundingClientRect();
+    if ((e.clientX - rect.left) / rect.width < 0.3) prev(); else next();
+  });
+  var sx=0, sy=0, tracking=false;
+  stage.addEventListener('touchstart', function(e){ var t=e.touches[0]; sx=t.clientX; sy=t.clientY; tracking=true; }, {passive:true});
+  stage.addEventListener('touchend', function(e){
+    if(!tracking) return; tracking=false;
+    var t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
+    if (Math.abs(dx)>45 && Math.abs(dx)>Math.abs(dy)*1.2){ lastSwipe=Date.now(); if (dx<0) next(); else prev(); }
+  }, {passive:true});
+  document.addEventListener('keydown', function(e){
+    if (e.target.closest && e.target.closest('button') && (e.key===' '||e.key==='Enter')) return;
+    if (e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown'){ e.preventDefault(); next(); }
+    else if (e.key==='ArrowLeft' || e.key==='PageUp'){ e.preventDefault(); prev(); }
+    else if (e.key==='Home') go(0); else if (e.key==='End') go(N-1);
+  });
+
+  // quizzes
+  Array.prototype.forEach.call(document.querySelectorAll('[data-quiz]'), function(q){
+    var opts = q.querySelector('.opts'), fb = q.querySelector('.fb');
+    Array.prototype.forEach.call(opts.querySelectorAll('.opt'), function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        if (opts.classList.contains('done')) return;
+        opts.classList.add('done'); answered++;
+        var ok = b.getAttribute('data-ok')==='1';
+        if (ok) correct++; else b.classList.add('wrong');
+        opts.querySelector('[data-ok="1"]').classList.add('right');
+        fb.innerHTML = '<span class="tag" style="color:'+(ok?'var(--green)':'var(--pink)')+'">'+(ok?'✓ Correct.':'✗ Not quite.')+'</span> '+fb.getAttribute(ok?'data-right':'data-wrong')+'<br><span style="color:var(--dim);font-size:12px">Tap or swipe to continue →</span>';
+        fb.classList.add('show');
+        if (navigator.vibrate) { try{ navigator.vibrate(ok?15:[20,40,20]); }catch(_){} }
+      });
+    });
+  });
+  function updateScore(){
+    var s=document.getElementById('score');
+    s.textContent = answered ? ('Quiz score: '+correct+' / '+NQ+(correct===NQ?' 🎯':'')+(answered<NQ?' ('+(NQ-answered)+' skipped)':'')) : '';
+  }
+
+  // client-side routing demo (simulated; doesn't touch the real URL)
+  var rtUrl=document.getElementById('rtUrl'), rtPage=document.getElementById('rtPage'), rtNet=document.getElementById('rtNet');
+  var autoT=null, loadT=null, touched=false;
+  function showList(){
+    rtUrl.innerHTML='🔒 <b>procore.com</b>/';
+    rtPage.innerHTML='<div class="ttl">Projects <span style="font-size:9px;color:#5d6680;font-weight:500">tap one ↓</span></div>'+
+      '<button class="prow tapme2" type="button" data-open="42">Riverside Tower <span>active</span></button>'+
+      '<button class="prow" type="button" data-open="43">Mercy Hospital Wing <span class="pl">bidding</span></button>';
+  }
+  function routeReset(auto){
+    clearTimeout(autoT); clearTimeout(loadT); touched=false;
+    showList();
+    rtNet.innerHTML = netHTML([1,3,4,6], null, true, 'loaded earlier');
+    if (auto) autoT=setTimeout(function(){ if(!touched && cards[cur].id==='routeCard') openProject('Riverside Tower'); }, 3200);
+  }
+  function openProject(name){
+    clearTimeout(autoT);
+    rtUrl.innerHTML='🔒 <b>procore.com</b>/projects/<span style="color:#3ddc97">42</span> <span class="reload" style="float:right;font-size:8.5px;padding:1px 6px">pushState</span>';
+    rtPage.innerHTML='<button class="backb" type="button" data-back="1">‹ Projects</button><div class="sk sm"></div><div class="sk"></div><div class="sk"></div>';
+    rtNet.innerHTML = netHTML([1,3,4,6,7], [7], false, '<span style="color:#3ddc97">no document request ✓</span>');
+    var rows=rtNet.querySelectorAll('.net-r'); for (var i=0;i<rows.length-1;i++){ rows[i].style.animation='none'; rows[i].querySelector('i').style.animation='none'; }
+    loadT=setTimeout(function(){
+      rtPage.innerHTML='<button class="backb" type="button" data-back="1">‹ Projects</button><div class="big">'+name+'</div>'+
+        '<div class="kv"><span>Status</span><b>active</b></div><div class="kv"><span>Open RFIs</span><b>7</b></div><div class="kv"><span>Rendered from</span><b>JSON</b></div>';
+    }, 650);
+  }
+  rtPage.addEventListener('click', function(e){
+    e.stopPropagation(); touched=true;
+    var o=e.target.closest('[data-open]'), b=e.target.closest('[data-back]');
+    if (o) openProject(o.firstChild.textContent.trim());
+    else if (b){ clearTimeout(loadT); showList(); rtNet.innerHTML = netHTML([1,3,4,6,7], null, true, 'back: popstate, no reload'); }
+  });
+
+  var start = parseInt((location.hash||'').slice(1),10);
+  go(isNaN(start)?0:start-1);
+})();
+</script>
+</body>
+</html>
