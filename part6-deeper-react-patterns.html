@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#07080d">
+<title>Part 6 · Deeper React Patterns</title><style>
+:root{
+  --bg:#07080d; --panel:#121622; --panel2:#181d2b; --line:#2a3145; --text:#eef1f8; --muted:#a3acc2; --dim:#5d6680;
+  --html:#ff7a45; --css:#4ea8ff; --js:#f7d046; --green:#3ddc97; --purple:#a78bfa; --pink:#ff5c8a; --cyan:#4ee6e0;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;overscroll-behavior:none}
+.app{position:fixed;inset:0;display:flex;justify-content:center;background:radial-gradient(1200px 600px at 50% -10%,#141a2e 0,transparent 60%),var(--bg)}
+.stage{position:relative;width:100%;max-width:460px;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:pan-y}
+@media (min-width:600px){.stage{height:min(100%,900px);margin:auto;border-radius:28px;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.6)}}
+.stage::before{content:"";position:absolute;inset:0;background:radial-gradient(500px 300px at 85% 10%,rgba(167,139,250,.10),transparent 70%),radial-gradient(500px 300px at 0% 90%,rgba(78,168,255,.08),transparent 70%);pointer-events:none}
+.top{position:absolute;left:0;right:0;top:0;z-index:5;padding:calc(env(safe-area-inset-top) + 10px) 14px 0}
+.segs{display:flex;gap:3px}
+.seg{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+.seg i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--css),var(--purple));transition:width .35s ease}
+.seg.done i{width:100%}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:12px;color:var(--muted);letter-spacing:.02em}
+.meta b{color:var(--text);font-weight:600}
+.card{position:absolute;inset:0;padding:calc(env(safe-area-inset-top) + 58px) 22px calc(env(safe-area-inset-bottom) + 64px);display:flex;flex-direction:column;opacity:0;visibility:hidden;transform:translateX(40px) scale(.98);transition:opacity .35s ease,transform .45s cubic-bezier(.2,.8,.2,1),visibility 0s linear .45s}
+.card.past{transform:translateX(-40px) scale(.98)}
+.card.active{opacity:1;visibility:visible;transform:none;transition:opacity .35s ease,transform .45s cubic-bezier(.2,.8,.2,1),visibility 0s}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--purple);margin-bottom:6px}
+.visual{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;margin:4px 0 14px}
+.visual svg{width:100%;height:100%;max-height:330px;overflow:visible}
+h1,h2{margin:0 0 10px;line-height:1.15;letter-spacing:-.02em}
+h1{font-size:clamp(30px,9vw,40px)}
+h2{font-size:clamp(22px,6.4vw,28px)}
+p{margin:0 0 8px;font-size:clamp(15px,4.2vw,17px);line-height:1.5;color:var(--muted)}
+p b,p strong{color:var(--text);font-weight:600}
+code,.mono{font-family:var(--mono);font-size:.9em}
+p code,.analogy code{background:#1b2131;border:1px solid var(--line);padding:1px 5px;border-radius:6px;color:#dfe5f5}
+.analogy{display:flex;gap:10px;align-items:flex-start;background:linear-gradient(135deg,rgba(78,168,255,.10),rgba(167,139,250,.10));border:1px solid rgba(120,140,255,.25);border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.45;color:#cfd6ea;margin-top:6px}
+.analogy::before{content:"⚙";font-size:15px;color:var(--css);line-height:1.3}
+.analogy b{color:#fff}
+.bottom{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:0 14px calc(env(safe-area-inset-bottom) + 12px)}
+.nav{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:rgba(18,22,34,.8);color:var(--text);font-size:20px;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(8px)}
+.nav:disabled{opacity:.3}
+.hint{font-size:12px;color:var(--dim)}
+svg *{transform-box:fill-box;transform-origin:center}
+.active .pop{animation:pop .55s cubic-bezier(.2,.9,.3,1.35) both;animation-delay:var(--d,0s)}
+.active .fade{animation:fade .6s ease both;animation-delay:var(--d,0s)}
+.active .rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0s)}
+.growx{transform-origin:left center}
+.active .growx{animation:growx .6s ease both;animation-delay:var(--d,0s)}
+.active .draw{stroke-dasharray:var(--len,300);animation:draw 1s ease both;animation-delay:var(--d,0s)}
+.flow{stroke-dasharray:4 6;animation:flow 1s linear infinite}
+.pulse{animation:pulse 2s ease-in-out infinite;animation-delay:var(--pd,0s)}
+@keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes growx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes draw{from{stroke-dashoffset:var(--len,300)}to{stroke-dashoffset:0}}
+@keyframes flow{to{stroke-dashoffset:-20}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes goR{0%{transform:translateX(0);opacity:0}10%,85%{opacity:1}100%{transform:translateX(60px);opacity:0}}
+@keyframes goL{0%{transform:translateX(0);opacity:0}10%,85%{opacity:1}100%{transform:translateX(-72px);opacity:0}}
+.req{animation:goR 2.4s ease-in-out infinite}
+.chunk{opacity:0;animation:goL 2.4s linear infinite;animation-delay:var(--d,0s)}
+.titlebadge{display:inline-flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 10px;margin-bottom:14px;align-self:flex-start;background:rgba(255,255,255,.03)}
+.titlebadge i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+.tapme{margin-top:6px;font-size:13px;color:var(--dim);animation:pulse 1.8s infinite}
+.grad{background:linear-gradient(90deg,var(--html),var(--js) 35%,var(--css) 70%,var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lay{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px}
+.lay-frame{width:100%;border:1px solid var(--line);border-radius:14px;padding:8px;background:#0d111b;display:flex;flex-direction:column;gap:6px;animation:resize 5s ease-in-out infinite alternate;position:relative}
+@keyframes resize{0%,15%{width:100%}85%,100%{width:52%}}
+.lay .b{border-radius:8px;font:600 11px/1 var(--mono);display:flex;align-items:center;justify-content:center;color:#0b0e16;padding:0 4px;overflow:hidden;white-space:nowrap}
+.lay .hdr{height:26px;background:var(--css)}
+.lay-row{display:flex;gap:6px}
+.lay .side{flex:0 0 26%;height:54px;background:var(--purple)}
+.lay .main{flex:1;height:54px;background:var(--green)}
+.lay-cards{display:flex;flex-wrap:wrap;gap:6px}
+.lay .c{flex:1 1 64px;height:30px;background:var(--js)}
+.ruler{font:12px var(--mono);color:var(--muted);display:flex;align-items:center;gap:8px}
+.ruler span{display:inline-block;height:2px;width:40px;background:linear-gradient(90deg,var(--pink),var(--js));border-radius:2px}
+.comp{position:relative;width:250px;height:230px;perspective:800px}
+.comp-in{position:absolute;inset:0;transform-style:preserve-3d}
+.layer{position:absolute;left:25px;top:30px;width:200px;height:170px;border-radius:14px;border:1px solid rgba(255,255,255,.18);transform-origin:center;animation:explode 6s ease-in-out infinite;--z:0px;display:flex;align-items:flex-end;justify-content:flex-end;padding:8px;font:600 10px var(--mono);color:rgba(255,255,255,.85)}
+.l1{--z:-60px;background-color:#151b30;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:16px 16px}
+.l2{--z:0px;background:rgba(78,168,255,.18)}
+.l2::before{content:"";position:absolute;left:66px;top:16px;width:112px;height:10px;border-radius:5px;background:rgba(255,255,255,.75);box-shadow:0 22px 0 rgba(255,255,255,.4),0 40px 0 rgba(255,255,255,.4),0 58px 0 rgba(255,255,255,.4),0 86px 0 -1px rgba(61,220,151,.7)}
+.l3{--z:60px;width:56px;background:rgba(167,139,250,.6);animation-name:explode3;align-items:flex-start;justify-content:center;padding-top:10px;text-align:center}
+@keyframes explode{0%,22%,100%{transform:rotateX(56deg) rotateZ(-38deg) translateZ(var(--z))}48%,80%{transform:rotateX(0) rotateZ(0) translateZ(0)}}
+@keyframes explode3{0%,22%,100%{transform:rotateX(56deg) rotateZ(-38deg) translateZ(var(--z))}48%{transform:translateX(-60px)}62%,80%{transform:translateX(0)}}
+.comp-tag{position:absolute;left:0;right:0;bottom:-6px;text-align:center;font:12px var(--mono);color:var(--muted)}
+.cost{width:100%;display:grid;grid-template-columns:92px repeat(5,1fr);gap:6px;font-size:10.5px;align-items:center}
+.cost .h{color:var(--dim);text-align:center;font-weight:600;letter-spacing:.02em}
+.cost .lbl{font:600 11px var(--mono);color:var(--text);line-height:1.3}
+.cost .lbl small{display:block;color:var(--dim);font-weight:400}
+.cell{height:30px;border-radius:8px;background:#151a27;border:1px dashed #262d40}
+.cell.on{background:var(--c);border:0;box-shadow:0 0 14px var(--c)}
+.active .cell.on{animation:light .45s ease both;animation-delay:var(--d,0s)}
+@keyframes light{from{opacity:.1;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+.costtag{grid-column:2/7;font-size:11px;color:var(--muted);text-align:right;margin-top:-2px}
+.qcode{font:13px/1.55 var(--mono);background:#0d111b;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0 14px;color:#cdd5ea;white-space:pre;overflow-x:auto}
+.qcode .k{color:var(--purple)}.qcode .s{color:var(--green)}.qcode .t{color:var(--html)}.qcode .c{color:var(--dim)}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);color:var(--text);font-size:15px;line-height:1.35;cursor:pointer;transition:transform .15s,border-color .2s,background .2s,opacity .2s}
+.opt:active{transform:scale(.98)}
+.opt:focus-visible{outline:2px solid var(--css)}
+.opt .l{flex:0 0 26px;height:26px;border-radius:8px;display:grid;place-items:center;background:#1e2436;font:700 12px var(--mono);color:var(--muted)}
+.opt code{font-size:13px}
+.opt.right{border-color:var(--green);background:rgba(61,220,151,.12)}
+.opt.right .l{background:var(--green);color:#06210f}
+.opt.wrong{border-color:var(--pink);background:rgba(255,92,138,.12);animation:shake .4s}
+.opt.wrong .l{background:var(--pink);color:#2a0612}
+.opts.done .opt:not(.right):not(.wrong){opacity:.45}
+@keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+.fb{margin-top:12px;font-size:14px;line-height:1.45;color:var(--muted);opacity:0;transform:translateY(8px);transition:.3s}
+.fb.show{opacity:1;transform:none}
+.fb b{color:var(--text)}
+.fb code{background:#1b2131;padding:1px 4px;border-radius:5px;color:#dfe5f5}
+.fb .tag{display:inline-block;font-weight:800;margin-right:4px}
+.qspacer{flex:1}
+.rx{width:100%;display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.rx-row{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.rx-box{flex:1;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:10px 8px;font:11px/1.4 var(--mono);color:#cdd5ea;min-height:62px;display:flex;flex-direction:column;justify-content:center}
+.rx-box .cap{font:700 9px system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.rx-arrow{color:var(--purple);font:700 13px var(--mono);flex:0 0 auto}
+.rx-f{flex:0 0 auto;background:linear-gradient(135deg,rgba(167,139,250,.25),rgba(78,168,255,.2));border:1px solid rgba(167,139,250,.5);border-radius:12px;padding:10px 7px;font:700 12px var(--mono)}
+.rx-ui{background:#f5f6fa;color:#141824;border-radius:14px;padding:9px 10px;font-size:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);min-height:62px}
+.rx-ui .bar{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px}
+.rx-ui .badge{background:#ff5c1a;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px}
+.rx-ui ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px}
+.rx-ui li{background:#e7e9f2;border-radius:6px;padding:3px 6px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flash{animation:flash .9s ease}
+@keyframes flash{0%{box-shadow:0 0 0 3px #3ddc97}100%{box-shadow:0 0 0 0 transparent}}
+.rx-note{font-size:12px;color:var(--dim);text-align:center}
+.btn{all:unset;cursor:pointer;align-self:center;padding:10px 18px;border-radius:999px;background:linear-gradient(135deg,var(--purple),var(--css));color:#fff;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(120,120,255,.35)}
+.btn:active{transform:scale(.96)}
+.btn.ghost{background:transparent;border:1px solid var(--line);box-shadow:none;color:var(--text);align-self:flex-start}
+.flowchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;width:100%}
+.chip{padding:7px 10px;border-radius:10px;font:700 12px var(--mono);color:#0b0e16;display:inline-block}
+.arr{color:var(--dim);font-size:12px}
+.take{list-style:none;padding:0;margin:14px 0 0;display:flex;flex-direction:column;gap:8px;width:100%}
+.take li{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13.5px;line-height:1.4;color:#cfd6ea}
+.take li b{color:#fff}
+.score{font-size:13px;color:var(--muted);margin-top:10px}
+.next-tags{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}
+.next-tags span{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted);font-family:var(--mono)}
+@media (max-height:700px){.visual svg{max-height:230px}.qcode{font-size:12px;padding:8px 10px;margin:4px 0 8px}.opt{padding:10px 12px}.analogy{font-size:13px;padding:8px 10px}p{font-size:15px}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+/* ---- lesson 1b additions ---- */
+.net{width:100%;background:#0d111b;border:1px solid var(--line);border-radius:12px;overflow:hidden;font:10.5px/1.2 var(--mono)}
+.net-h,.net-r{display:grid;grid-template-columns:1.35fr 46px 40px 1fr;gap:6px;align-items:center;padding:6px 9px}
+.net-h{color:var(--dim);font:700 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--line);background:#121622}
+.net-r{border-bottom:1px solid #161b28;color:#cdd5ea}
+.net-r:last-of-type{border-bottom:0}
+.net-r .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.net-r .t{color:var(--muted);font-size:9.5px}
+.net-r .z{color:var(--muted);text-align:right;font-size:9.5px}
+.net-r.dim{color:#59627a}.net-r.dim .t,.net-r.dim .z{color:#454d63}.net-r.dim .wf i{opacity:.35}
+.net-r.hl{background:rgba(78,168,255,.09);box-shadow:inset 3px 0 0 var(--css)}
+.wf{position:relative;height:9px;background:repeating-linear-gradient(90deg,transparent 0 19.6%,#1a2030 19.6% 20%)}
+.wf i{position:absolute;top:0;height:100%;border-radius:3px;left:var(--s);width:var(--w);background:var(--c);transform-origin:left center}
+.active .net-r{animation:rise .4s ease both;animation-delay:var(--d,0s)}
+.active .wf i{animation:growx .5s ease both;animation-delay:calc(var(--d,0s) + .15s)}
+.net-foot{padding:5px 9px;color:var(--dim);font-size:9px;display:flex;justify-content:space-between;border-top:1px solid var(--line);background:#121622}
+.netwrap{width:100%;display:flex;flex-direction:column;gap:10px}
+.cb{width:100%;font:11.5px/1.5 var(--mono);background:#0d111b;border:1px solid var(--line);border-radius:12px;color:#cdd5ea;overflow:hidden}
+.cb pre{margin:0;padding:9px 11px;white-space:pre;overflow-x:auto;font:inherit}
+.cb-h{display:flex;justify-content:space-between;align-items:center;padding:5px 11px;background:#121622;border-bottom:1px solid var(--line);font:700 9px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.cb-h .tagc{font:700 9.5px var(--mono);letter-spacing:0;text-transform:none;padding:2px 7px;border-radius:999px}
+.k{color:var(--purple)}.s{color:var(--green)}.t{color:var(--html)}.c{color:var(--dim)}.y{color:var(--js)}.bl{color:var(--css)}
+.mk{background:rgba(247,208,70,.18);color:var(--js);border-radius:4px;padding:0 2px}
+.stack{width:100%;display:flex;flex-direction:column;gap:8px}
+.down{align-self:center;color:var(--purple);font:700 13px var(--mono);line-height:1}
+/* phone mock */
+.phone{width:178px;height:300px;border-radius:26px;border:2px solid #2a3145;background:#0b0e16;padding:12px 10px;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.5);flex:0 0 auto;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.url{font:10px var(--mono);background:#181d2b;border-radius:8px;padding:6px 8px;color:var(--muted);white-space:nowrap;overflow:hidden}
+.url b{color:var(--text);font-weight:600}
+.pg{flex:1;border-radius:12px;background:#f3f5fa;padding:10px 9px;display:flex;flex-direction:column;gap:7px;color:#141824;font-size:11px;overflow:hidden;position:relative}
+.pg.blank{background:#fff}
+.pg .ttl{font-weight:800;font-size:12.5px;display:flex;justify-content:space-between;align-items:center}
+.sk{height:30px;border-radius:8px;background:linear-gradient(90deg,#e1e5ee 0,#f0f2f7 40%,#e1e5ee 80%);background-size:250% 100%;animation:shimmer 1.3s linear infinite}
+.sk.sm{height:12px;width:60%}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:-150% 0}}
+.prow{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e3e6ee;border-radius:8px;padding:7px 8px;font-size:10.5px;font-weight:600;color:#141824;cursor:pointer}
+.prow span{font-weight:500;font-size:9px;color:#fff;background:#3ddc97;border-radius:999px;padding:1px 6px}
+.prow span.pl{background:#f7a046}
+.prow.tapme2{box-shadow:0 0 0 0 rgba(255,92,26,.6);animation:ring 1.6s infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,92,26,.55)}70%{box-shadow:0 0 0 8px rgba(255,92,26,0)}100%{box-shadow:0 0 0 0 rgba(255,92,26,0)}}
+.dom{font:10.5px/1.55 var(--mono);color:#cdd5ea;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:10px;flex:1;min-width:0;white-space:pre;overflow:hidden}
+.row2{display:flex;gap:12px;align-items:center;width:100%;justify-content:center}
+.swap-a{animation:none}
+.active .later{animation:fade .5s ease both;animation-delay:var(--d,1.5s)}
+.active .gone{animation:gone .4s ease both;animation-delay:var(--d,1.5s)}
+@keyframes gone{to{opacity:0;height:0;margin:0;padding:0}}
+/* comparison table */
+.vs{width:100%;display:grid;grid-template-columns:76px 1fr 1fr;gap:5px;font-size:12px;line-height:1.3}
+.vs div{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px 8px;color:#cfd6ea}
+.vs .vh{font-weight:800;text-align:center;border:0}
+.vs .vh.code{background:rgba(247,208,70,.14);color:var(--js)}
+.vs .vh.data{background:rgba(61,220,151,.14);color:var(--green)}
+.vs .vl{background:transparent;border:0;color:var(--dim);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;padding:0}
+.trio{width:100%;display:flex;flex-direction:column;gap:7px}
+.trio .cb pre{padding:6px 10px;font-size:10.5px}
+.find{font-size:12px;color:var(--muted);text-align:center}
+.reload{display:inline-block;font:700 10px var(--mono);padding:3px 8px;border-radius:999px;background:rgba(61,220,151,.15);color:var(--green);border:1px solid rgba(61,220,151,.4)}
+.backb{all:unset;cursor:pointer;font-size:10px;color:#4a57c9;font-weight:700}
+.detail .big{font-size:13px;font-weight:800}
+.kv{display:flex;justify-content:space-between;font-size:10px;background:#fff;border-radius:6px;padding:5px 7px;border:1px solid #e3e6ee}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);justify-content:center}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+
+.cb pre{font-size:10.5px}.stack{gap:7px}.sect .num{font-size:80px}
+a.btn{text-decoration:none;display:inline-block}
+
+</style></head><body><style>
+.sect h1{font-size:clamp(34px,10vw,46px)}
+.sect .num{font:800 90px/1 system-ui;background:linear-gradient(135deg,var(--css),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent;opacity:.9}
+.vwrap{width:100%;display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.scrollv{width:100%;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;user-select:text;-webkit-user-select:text;padding-bottom:4px}
+.card.lab .visual{align-items:stretch}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:12px;line-height:1.4;color:#cfd6ea}
+.box b{color:#fff}.box small{color:var(--dim)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;width:100%;counter-reset:st}
+.steps li{counter-increment:st;display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 9px;font-size:12px;color:#cfd6ea;opacity:.3}
+.steps li::before{content:counter(st);flex:0 0 20px;height:20px;border-radius:6px;display:grid;place-items:center;background:#1e2436;font:700 10px var(--mono);color:var(--muted)}
+.steps li code{font-size:11px;color:var(--js)}
+.active .steps li{animation:lit 7s ease infinite;animation-delay:var(--d,0s)}
+@keyframes lit{0%{opacity:.3}4%,70%{opacity:1;border-color:var(--css);background:rgba(78,168,255,.10)}90%,100%{opacity:.3}}
+.pill{display:inline-block;font:700 10px var(--mono);padding:2px 7px;border-radius:999px;margin:1px}
+.warn{border-color:rgba(255,92,138,.5)!important;background:rgba(255,92,138,.08)!important}
+.ok{border-color:rgba(61,220,151,.5)!important;background:rgba(61,220,151,.08)!important}
+.chk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;width:100%}
+.chk li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 9px 6px 30px;font-size:12px;line-height:1.35;color:#cfd6ea;position:relative}
+.chk li::before{content:"✓";position:absolute;left:9px;top:5px;color:var(--green);font-weight:800}
+.chk li b{color:#fff}
+.bleed button{all:unset;font:700 11px system-ui;padding:6px 10px;border-radius:8px;background:#ff5c1a;color:#fff}
+.active .bleed .victim{animation:bleed 4s ease-in-out infinite}
+@keyframes bleed{0%,35%{background:#ff5c1a;border-radius:8px}45%,85%{background:#c21d6b;border-radius:0;transform:skewX(-6deg)}100%{background:#ff5c1a}}
+.flashr{animation:flashr 2.4s ease infinite;animation-delay:var(--d,0s)}
+@keyframes flashr{0%,100%{fill:#151a27}20%,40%{fill:var(--pink)}}
+.blink{animation:blink 2.4s steps(1) infinite;animation-delay:var(--d,0s)}
+@keyframes blink{0%{opacity:1}50%{opacity:.2}}
+.mv{animation:mv 3s ease-in-out infinite;animation-delay:var(--d,0s)}
+@keyframes mv{0%{transform:translate(0,0);opacity:0}10%{opacity:1}80%{opacity:1}100%{transform:translate(var(--tx,0),var(--ty,0));opacity:0}}
+</style>
+<div class="app"><main class="stage" id="stage">
+  <div class="top"><div class="segs" id="segs"></div><div class="meta"><span><b>Part 6</b> · Deeper React</span><a href="index.html" style="color:var(--muted);text-decoration:none;margin-left:auto;margin-right:10px">⌂ home</a><span id="count" aria-live="polite"></span></div></div>
+  <div class="bottom" id="bottomBar"><button class="nav" id="prev" type="button" aria-label="Previous card">‹</button><span class="hint">tap · swipe · ← →</span><button class="nav" id="next" type="button" aria-label="Next card">›</button></div>
+</main></div>
+<script>var CARDS = [{"sect": 1, "num": "R+", "kicker": "Part 6 · React, deeper", "h": "Hooks &amp; patterns <span class=\"grad\">you'll meet in review<\/span>", "p": "The hooks beyond useState, the composition patterns behind real codebases, and a checklist for reviewing AI-written React.", "badge": "~12 min · 25 cards · 5 quizzes", "first": true}, {"k": "useMemo", "h": "Cache an expensive derived value", "cmp": [["TSX", "const visible = useMemo(\n  () => projects.filter(p => p.name.includes(query))\n                .sort(byDueDate),\n  [projects, query]          // recompute only when these change\n);"], ["Java", "// like a memoized getter keyed on inputs\n@Cacheable(key = \"#projects.hashCode() + #query\")\nList<Project> visible(List<Project> projects, String query)"]], "p": "React re-runs your whole component function on each render. <code>useMemo<\/code> skips recomputing when the deps are <b>identical<\/b> (<code>Object.is<\/code>). Use it for heavy work or to keep an object's identity stable, not for every value."}, {"k": "useCallback", "h": "Keep the same function between renders", "v": "<svg viewBox=\"0 0 320 130\"><g font-family=\"monospace\" font-size=\"10\"><text x=\"6\" y=\"20\" fill=\"#a3acc2\">render #<\/text><text x=\"6\" y=\"58\" fill=\"#ff5c8a\">inline fn<\/text><text x=\"6\" y=\"100\" fill=\"#3ddc97\">useCallback<\/text><\/g>\n<g font-family=\"monospace\" font-size=\"9\" text-anchor=\"middle\"><text x=\"110\" y=\"20\" fill=\"#5d6680\">1<\/text><text x=\"180\" y=\"20\" fill=\"#5d6680\">2<\/text><text x=\"250\" y=\"20\" fill=\"#5d6680\">3<\/text><\/g>\n<g class=\"pop\" style=\"--d:.1s\"><rect x=\"88\" y=\"42\" width=\"44\" height=\"24\" rx=\"6\" fill=\"#3a1624\" stroke=\"#ff5c8a\"/><text x=\"110\" y=\"58\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">fn@a1<\/text><\/g>\n<g class=\"pop\" style=\"--d:.5s\"><rect x=\"158\" y=\"42\" width=\"44\" height=\"24\" rx=\"6\" fill=\"#3a1624\" stroke=\"#ff5c8a\"/><text x=\"180\" y=\"58\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">fn@b7<\/text><\/g>\n<g class=\"pop\" style=\"--d:.9s\"><rect x=\"228\" y=\"42\" width=\"44\" height=\"24\" rx=\"6\" fill=\"#3a1624\" stroke=\"#ff5c8a\"/><text x=\"250\" y=\"58\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">fn@c3<\/text><\/g>\n<g class=\"pop\" style=\"--d:.1s\"><rect x=\"88\" y=\"84\" width=\"44\" height=\"24\" rx=\"6\" fill=\"#10261c\" stroke=\"#3ddc97\"/><text x=\"110\" y=\"100\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">fn@a1<\/text><\/g>\n<g class=\"pop\" style=\"--d:.5s\"><rect x=\"158\" y=\"84\" width=\"44\" height=\"24\" rx=\"6\" fill=\"#10261c\" stroke=\"#3ddc97\"/><text x=\"180\" y=\"100\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">fn@a1<\/text><\/g>\n<g class=\"pop\" style=\"--d:.9s\"><rect x=\"228\" y=\"84\" width=\"44\" height=\"24\" rx=\"6\" fill=\"#10261c\" stroke=\"#3ddc97\"/><text x=\"250\" y=\"100\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">fn@a1<\/text><\/g>\n<text x=\"180\" y=\"126\" fill=\"#5d6680\" font-size=\"9\" text-anchor=\"middle\">same identity → memo(child) can skip<\/text><\/svg>", "cmp": [["TSX", "const onSelect = useCallback(id => setSelected(id), []);\n<ProjectRow onSelect={onSelect} />   // memo(ProjectRow) can now skip"]], "p": "<code>useCallback(fn, deps)<\/code> = <code>useMemo(() =&gt; fn, deps)<\/code>. Only useful when the function goes to a <b>memoized child<\/b> or into a dependency array."}, {"k": "useRef", "h": "A mutable box that doesn't trigger renders", "v": "<div class=\"g2\"><div class=\"box rise\"><b>useState<\/b><br><small>change → re-render<\/small><br><code>setCount(c+1)<\/code> <span class=\"pill\" style=\"background:#3a1624;color:#ff5c8a\">render!<\/span><\/div><div class=\"box rise\" style=\"--d:.3s\"><b>useRef<\/b><br><small>change → no render<\/small><br><code>ref.current++<\/code> <span class=\"pill\" style=\"background:#10261c;color:#3ddc97\">silent<\/span><\/div><\/div>", "cmp": [["TSX", "const inputRef = useRef<HTMLInputElement>(null);\n<input ref={inputRef} />\ninputRef.current?.focus();          // DOM access\n\nconst timer = useRef<number>();      // instance variable\ntimer.current = window.setTimeout(save, 500);"]], "an": "Think of it as a private <b>instance field<\/b> on the component: it survives renders, but writing it isn't observed."}, {"quiz": true, "k": "Quiz 1 / 5 · Hooks", "h": "You need the latest WebSocket instance for cleanup, and it never appears in the UI. Which hook?", "opts": [["useState", 0], ["useRef", 1], ["useMemo", 0]], "right": "<code>useRef<\/code>: it persists across renders and changing it doesn't cause a re-render. It's perfect for sockets, timers and DOM nodes.", "wrong": "It's <b>useRef<\/b>. useState would re-render needlessly, and useMemo is a cache that React may throw away, so it isn't meant for storage."}, {"k": "Context", "h": "Skip prop drilling for app-wide values", "v": "<svg viewBox=\"0 0 320 190\"><g stroke=\"#2a3145\" stroke-width=\"2\"><line x1=\"160\" y1=\"40\" x2=\"80\" y2=\"90\"/><line x1=\"160\" y1=\"40\" x2=\"240\" y2=\"90\"/><line x1=\"80\" y1=\"110\" x2=\"40\" y2=\"150\"/><line x1=\"80\" y1=\"110\" x2=\"120\" y2=\"150\"/><line x1=\"240\" y1=\"110\" x2=\"240\" y2=\"150\"/><\/g>\n<rect x=\"100\" y=\"14\" width=\"120\" height=\"28\" rx=\"8\" fill=\"rgba(167,139,250,.3)\" stroke=\"#a78bfa\"/><text x=\"160\" y=\"32\" fill=\"#fff\" font-size=\"10\" text-anchor=\"middle\" font-family=\"monospace\">UserContext.Provider<\/text>\n<rect x=\"40\" y=\"90\" width=\"80\" height=\"22\" rx=\"7\" fill=\"#151a27\" stroke=\"#2a3145\"/><text x=\"80\" y=\"105\" fill=\"#a3acc2\" font-size=\"9\" text-anchor=\"middle\">Layout<\/text>\n<rect x=\"200\" y=\"90\" width=\"80\" height=\"22\" rx=\"7\" fill=\"#151a27\" stroke=\"#2a3145\"/><text x=\"240\" y=\"105\" fill=\"#a3acc2\" font-size=\"9\" text-anchor=\"middle\">Sidebar<\/text>\n<rect class=\"pulse\" x=\"8\" y=\"150\" width=\"68\" height=\"24\" rx=\"7\" fill=\"rgba(61,220,151,.25)\" stroke=\"#3ddc97\"/><text x=\"42\" y=\"166\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">Avatar ✓<\/text>\n<rect x=\"88\" y=\"150\" width=\"64\" height=\"24\" rx=\"7\" fill=\"#151a27\" stroke=\"#2a3145\"/><text x=\"120\" y=\"166\" fill=\"#a3acc2\" font-size=\"9\" text-anchor=\"middle\">Feed<\/text>\n<rect class=\"pulse\" style=\"--pd:.6s\" x=\"204\" y=\"150\" width=\"72\" height=\"24\" rx=\"7\" fill=\"rgba(61,220,151,.25)\" stroke=\"#3ddc97\"/><text x=\"240\" y=\"166\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">Menu ✓<\/text>\n<path class=\"flow\" d=\"M100 28 C20 40 10 110 30 148\" stroke=\"#3ddc97\" stroke-width=\"1.5\" fill=\"none\"/><path class=\"flow\" d=\"M220 28 C300 50 300 120 262 148\" stroke=\"#3ddc97\" stroke-width=\"1.5\" fill=\"none\"/><\/svg>", "cmp": [["TSX", "const UserContext = createContext<User | null>(null);\n<UserContext.Provider value={user}><App /><\/UserContext.Provider>\nconst user = useContext(UserContext);   // any depth"]], "an": "Like Rails <code>CurrentAttributes<\/code> or a request-scoped bean: available anywhere below the provider. Every consumer re-renders when the value changes, so keep it for rarely-changing data (user, theme, locale)."}, {"k": "Custom hooks", "h": "Extract stateful logic into a function", "cmp": [["TSX", "function useProjects(companyId: number) {\n  return useQuery({\n    queryKey: ['projects', companyId],\n    queryFn: () => api.get(`/companies/${companyId}/projects`),\n  });\n}\n// in any component\nconst { data, isPending, error } = useProjects(42);"], ["Ruby", "# like a concern / service object\nmodule ProjectsLoader\n  def projects = Project.where(company_id:)\nend"]], "p": "A custom hook is just a function whose name starts with <code>use<\/code> and which calls other hooks. It shares <b>logic<\/b>, not state: each caller gets its own copy."}, {"k": "useReducer", "h": "State transitions as explicit events", "cmp": [["TSX", "type Action = { type: 'submit' } | { type: 'success'; id: number }\n            | { type: 'fail'; error: string };\nfunction reducer(s: State, a: Action): State {\n  switch (a.type) {\n    case 'submit':  return { ...s, status: 'saving' };\n    case 'success': return { status: 'saved', id: a.id };\n    case 'fail':    return { ...s, status: 'error', error: a.error };\n  }\n}\nconst [state, dispatch] = useReducer(reducer, initial);"]], "an": "A state machine, or event sourcing in miniature: pure <code>(state, event) → state<\/code>, easy to unit test like an AASM model. Reach for it when several fields change together."}, {"quiz": true, "k": "Quiz 2 / 5 · Context", "h": "A context holds <code>{ user, cursorX, cursorY }<\/code>, updated on every mousemove. What's the problem?", "opts": [["Nothing, context is optimised for this", 0], ["Every consumer re-renders on every mouse move", 1], ["Context can't hold numbers", 0]], "right": "Any change to the value re-renders <b>all<\/b> consumers. Split fast-changing data into its own context or a store with selectors.", "wrong": "Every consumer <b>re-renders on every move<\/b>. Context has no selectors, so keep it for slow-changing values."}, {"k": "Pattern · Container / presentational", "h": "Separate fetching from rendering", "v": "<div class=\"g2\"><div class=\"box rise\"><b>Container<\/b><br><small>fetches, holds state, handles events<\/small><br><code>ProjectsPage<\/code><\/div><div class=\"box rise\" style=\"--d:.3s\"><b>Presentational<\/b><br><small>props in, JSX out, no fetching<\/small><br><code>ProjectTable<\/code><\/div><\/div><div class=\"down rise\" style=\"--d:.6s\">props ↓ · callbacks ↑<\/div>", "cmp": [["TSX", "function ProjectsPage() {                 // container\n  const { data = [] } = useProjects(42);\n  return <ProjectTable rows={data} onOpen={open} />;\n}\nfunction ProjectTable({ rows, onOpen }) { … }  // pure, easy to test"]], "an": "Controller vs view. With hooks the \"container\" is often just a custom hook, but the split still makes components easy to test and reuse."}, {"k": "Pattern · Composition", "h": "Pass components in with <code>children<\/code>", "cmp": [["TSX", "function Panel({ title, actions, children }) {\n  return (<section>\n    <header>{title}{actions}<\/header>\n    {children}\n  <\/section>);\n}\n<Panel title=\"RFIs\" actions={<Button>New<\/Button>}>\n  <RfiTable />\n<\/Panel>"], ["Ruby", "<%= render 'panel', title: 'RFIs' do %>\n  <%= render 'rfi_table' %>\n<% end %>   <!-- yield -->"]], "p": "Prefer composition over config props like <code>showHeader<\/code> and <code>headerVariant<\/code>. Slots (<code>children<\/code>, <code>actions<\/code>) keep components small."}, {"k": "Pattern · Compound components", "h": "Parts that share state implicitly", "cmp": [["TSX", "<Tabs defaultValue=\"open\">\n  <Tabs.List>\n    <Tabs.Tab value=\"open\">Open<\/Tabs.Tab>\n    <Tabs.Tab value=\"closed\">Closed<\/Tabs.Tab>\n  <\/Tabs.List>\n  <Tabs.Panel value=\"open\"><OpenRfis /><\/Tabs.Panel>\n<\/Tabs>\n// Tabs holds state in a private context; parts read it"]], "p": "The <code>&lt;select&gt;/&lt;option&gt;<\/code> idea: a parent owns the state, children coordinate through a <b>private context<\/b>. Common in design systems."}, {"k": "Render props vs hooks", "h": "Same reuse, cleaner syntax", "cmp": [["TSX", "// render prop (older)\n<MouseTracker render={({ x, y }) => <Dot x={x} y={y} />} />\n\n// hook (modern)\nconst { x, y } = useMouse();\nreturn <Dot x={x} y={y} />;"]], "p": "Render props and HOCs were how logic got shared before hooks. Prefer hooks now. Render props still fit when the <b>parent controls what gets rendered<\/b> (virtualised lists, headless tables)."}, {"quiz": true, "k": "Quiz 3 / 5 · Patterns", "h": "A <code>&lt;Card&gt;<\/code> has grown 14 boolean props like <code>showFooter<\/code>, <code>footerLeft<\/code>… Best refactor?", "opts": [["Add a config object prop instead", 0], ["Composition: header/body/footer slots or compound parts", 1], ["Split it into 14 components", 0]], "right": "<b>Composition<\/b> lets callers pass the pieces they need instead of toggling a growing list of flags.", "wrong": "Use <b>composition<\/b> (slots or compound parts). A config object just moves the boolean explosion somewhere else."}, {"k": "Server state vs client state", "h": "Two kinds of state, two tools", "v": "<div class=\"g2\"><div class=\"box rise\"><b>Server state<\/b><br><small>projects, RFIs, users. Owned by the API, can go stale, shared across screens.<\/small><br><span class=\"pill\" style=\"background:#13243a;color:#4ea8ff\">React Query<\/span><\/div><div class=\"box rise\" style=\"--d:.3s\"><b>Client state<\/b><br><small>modal open, selected tab, form draft. Owned by the browser.<\/small><br><span class=\"pill\" style=\"background:#22183a;color:#a78bfa\">useState / context / Zustand<\/span><\/div><\/div>", "cmp": [["TSX", "const qc = useQueryClient();\nconst create = useMutation({\n  mutationFn: (p: NewProject) => api.post('/projects', p),\n  onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),\n});"]], "an": "React Query is your read-through cache (think Rails.cache with expiry plus cache busting on writes). Mutations invalidate keys, like busting a cache key after an update."}, {"k": "React Query vs a global store", "h": "Don't put API data in Redux by default", "v": "<div class=\"vs\"><div class=\"vl\"><\/div><div class=\"vh data\">React Query<\/div><div class=\"vh code\">Global store (Redux)<\/div>\n<div class=\"vl\">Caching<\/div><div class=\"rise\">Built in, keyed by query<\/div><div class=\"rise\">You write it<\/div>\n<div class=\"vl\">Loading/error<\/div><div class=\"rise\" style=\"--d:.2s\">Given: isPending, error<\/div><div class=\"rise\" style=\"--d:.2s\">Hand-rolled flags<\/div>\n<div class=\"vl\">Staleness<\/div><div class=\"rise\" style=\"--d:.4s\">Refetch on focus, invalidate<\/div><div class=\"rise\" style=\"--d:.4s\">Manual<\/div>\n<div class=\"vl\">Good for<\/div><div class=\"rise\" style=\"--d:.6s\">API data<\/div><div class=\"rise\" style=\"--d:.6s\">Complex client workflows<\/div><\/div>", "p": "Most \"global state\" in older apps is really cached server data. Move that to React Query and what's left (UI state) is usually small enough for <code>useState<\/code> + context, or a tiny Zustand store."}, {"k": "Folder structure", "h": "Group by feature, not by file type", "v": "<div class=\"tree\">src/\n  <span class=\"new\">features/<\/span>            <span class=\"c\"># by domain, like Rails engines<\/span>\n    projects/\n      api.ts            <span class=\"c\"># fetchers + query hooks<\/span>\n      components/       <span class=\"c\"># ProjectTable, ProjectCard<\/span>\n      hooks/            <span class=\"c\"># useProjectFilters<\/span>\n      ProjectsPage.tsx\n      projects.test.tsx\n    rfis/ …\n  <span class=\"new\">shared/<\/span>\n    ui/ (Button, Modal)  hooks/  lib/\n  app/ (routes, providers)<\/div>", "p": "<code>components/<\/code>, <code>reducers/<\/code>, <code>utils/<\/code> at the top level scale badly. <b>Feature folders<\/b> keep a slice's UI, hooks, API and tests together, and map cleanly onto a Module Federation remote."}, {"k": "Performance · Why re-renders happen", "h": "State change → that component and all children", "v": "<svg viewBox=\"0 0 320 170\"><g stroke=\"#2a3145\" stroke-width=\"2\"><line x1=\"160\" y1=\"38\" x2=\"90\" y2=\"80\"/><line x1=\"160\" y1=\"38\" x2=\"230\" y2=\"80\"/><line x1=\"90\" y1=\"100\" x2=\"50\" y2=\"138\"/><line x1=\"90\" y1=\"100\" x2=\"130\" y2=\"138\"/><line x1=\"230\" y1=\"100\" x2=\"230\" y2=\"138\"/><\/g>\n<rect class=\"flashr\" x=\"115\" y=\"14\" width=\"90\" height=\"26\" rx=\"8\" stroke=\"#ff5c8a\"/><text x=\"160\" y=\"31\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">Page (setState)<\/text>\n<rect class=\"flashr\" style=\"--d:.15s\" x=\"50\" y=\"80\" width=\"80\" height=\"22\" rx=\"7\" stroke=\"#ff5c8a\"/><text x=\"90\" y=\"95\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">Filters<\/text>\n<rect class=\"flashr\" style=\"--d:.15s\" x=\"190\" y=\"80\" width=\"80\" height=\"22\" rx=\"7\" stroke=\"#ff5c8a\"/><text x=\"230\" y=\"95\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">Table<\/text>\n<rect class=\"flashr\" style=\"--d:.3s\" x=\"14\" y=\"138\" width=\"72\" height=\"22\" rx=\"7\" stroke=\"#ff5c8a\"/><text x=\"50\" y=\"153\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">Chip<\/text>\n<rect class=\"flashr\" style=\"--d:.3s\" x=\"94\" y=\"138\" width=\"72\" height=\"22\" rx=\"7\" stroke=\"#ff5c8a\"/><text x=\"130\" y=\"153\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">Chip<\/text>\n<rect x=\"190\" y=\"138\" width=\"80\" height=\"22\" rx=\"7\" fill=\"rgba(61,220,151,.2)\" stroke=\"#3ddc97\"/><text x=\"230\" y=\"153\" fill=\"#fff\" font-size=\"9\" text-anchor=\"middle\">memo(Row) skip<\/text><\/svg>", "p": "A component re-renders when its <b>state<\/b> changes, its <b>parent<\/b> re-renders, or a <b>context<\/b> it uses changes. Props changing isn't the trigger; the parent rendering is.", "an": "Re-render ≠ DOM update. React diffs, so most re-renders are cheap. Optimise after the Profiler shows a slow one."}, {"k": "Performance · memo", "h": "<code>React.memo<\/code> skips when props are equal", "cmp": [["TSX", "const ProjectRow = memo(function ProjectRow({ project, onSelect }) {\n  return <tr onClick={() => onSelect(project.id)}>…<\/tr>;\n});\n// only works if parent passes STABLE props:\n//   onSelect from useCallback, project not rebuilt each render"]], "p": "<code>memo<\/code> does a shallow prop comparison. A new <code>{}<\/code>, <code>[]<\/code> or arrow on each render defeats it. Cheaper wins first: <b>move state down<\/b>, pass <code>children<\/code>, virtualise long lists."}, {"quiz": true, "k": "Quiz 4 / 5 · Performance", "h": "Why does <code>memo(Row)<\/code> still re-render every time?", "code": "<Row project={p} style={{ padding: 8 }}\n     onSelect={id => setSel(id)} />", "opts": [["memo is broken in React 18", 0], ["style and onSelect are new objects/functions every render", 1], ["Row needs a key", 0]], "right": "Inline <code>{{…}}<\/code> and arrows create <b>new references<\/b> each render, so the shallow compare fails. Hoist the style and use <code>useCallback<\/code>.", "wrong": "The inline <b>object and arrow are new every render<\/b>, so memo's shallow compare always sees changed props."}, {"k": "Accessibility basics", "h": "Semantic HTML does most of the work", "cmp": [["TSX", "// ✗ invisible to keyboard + screen readers\n<div onClick={save}>Save<\/div>\n<input placeholder=\"Name\" />\n<img src={logo} />\n\n// ✓\n<button onClick={save}>Save<\/button>\n<label htmlFor=\"name\">Name<\/label><input id=\"name\" />\n<img src={logo} alt=\"Procore\" />\n<button aria-label=\"Close dialog\">×<\/button>"]], "p": "Use <b>real elements<\/b> (button, a, label, headings in order), make everything work with Tab and Enter, keep focus visible, move focus into modals, and don't rely on colour alone. Bonus: RTL's role queries then just work."}, {"k": "Reviewing AI-generated React", "h": "A checklist for the PR", "v": "<ul class=\"chk\"><li class=\"rise\"><b>Keys<\/b>: stable ids, not array index, on reorderable lists<\/li><li class=\"rise\" style=\"--d:.1s\"><b>Effects<\/b>: dependency arrays complete; no effect just to derive state; cleanup for subscriptions/timers<\/li><li class=\"rise\" style=\"--d:.2s\"><b>State<\/b>: no duplicated or derivable state; immutable updates<\/li><li class=\"rise\" style=\"--d:.3s\"><b>Data<\/b>: server state in React Query, loading + error + empty states handled<\/li><li class=\"rise\" style=\"--d:.4s\"><b>Types<\/b>: no <code>any<\/code>, props typed, API data validated<\/li><li class=\"rise\" style=\"--d:.5s\"><b>A11y<\/b>: real buttons/labels, keyboard path works<\/li><li class=\"rise\" style=\"--d:.6s\"><b>Perf<\/b>: memo only where measured; no huge context values<\/li><li class=\"rise\" style=\"--d:.7s\"><b>Fit<\/b>: uses <i>our<\/i> design system, folder layout, and tests by role<\/li><\/ul>", "p": "AI code usually compiles and demos fine; the bugs hide in effects, keys, missing states and accessibility."}, {"k": "Prompts for better output", "h": "Give it the context a new hire would need", "lab": true, "cmp": [["Bash", "You are writing React 18 + TypeScript for a Module\nFederation remote at Procore.\nContext:\n- Server state: @tanstack/react-query v5; API = GET /api/projects\n- UI: @procore/core-react components only, no inline styles\n- Tests: Jest + React Testing Library, query by role\nTask: build <ProjectsTable> with search + status filter.\nConstraints:\n- No useEffect for derived data; no any\n- Handle loading, error, and empty states\n- Accessible: labelled inputs, keyboard usable\nOutput: component, hook, and test file. Then list\nassumptions and anything you were unsure about.", "prompt template"]], "p": "Name the versions, libraries, constraints and expected files. Asking for <b>assumptions<\/b> brings up the guesses you need to check. Then follow up: \"review this against the checklist and fix issues\"."}, {"quiz": true, "k": "Quiz 5 / 5 · Review", "h": "AI wrote this. What's the main issue?", "code": "const [full, setFull] = useState('');\nuseEffect(() => {\n  setFull(first + ' ' + last);\n}, [first, last]);", "opts": [["Missing cleanup function", 0], ["Derived state in an effect: just compute it in render", 1], ["Should use useRef", 0]], "right": "<code>const full = first + ' ' + last<\/code> is enough. The effect adds an extra render and a frame of stale UI.", "wrong": "It's <b>derived state<\/b>. Compute it during render (or with useMemo if it's expensive); effects are for syncing with outside systems."}, {"recap": true, "h": "Deeper React on one card", "items": ["<b>useMemo/useCallback<\/b> keep values/functions stable; <b>useRef<\/b> = instance field; <b>useReducer<\/b> = state machine.", "<b>Context<\/b> for slow-changing app-wide values; <b>custom hooks<\/b> to share logic.", "Patterns: container/presentational, <b>composition<\/b>, compound components; hooks over render props.", "<b>React Query<\/b> for server state; small client state stays local; feature folders.", "Re-render causes: state, parent, context. memo needs stable props. Semantic HTML first. Review AI code with the checklist."], "next": "Next: <b>Part 7<\/b>, testing with Jest &amp; RTL."}];
+</script>
+<script>(function(){
+  "use strict";
+  var KW='const|let|var|function|return|if|else|async|await|new|class|interface|type|import|export|default|from|def|end|public|private|static|final|void|try|catch|throw|typeof|record|enum|module|for|of|in|null|undefined|true|false|this|self|nil|package|implements|extends|describe|it|test|expect|before|beforeEach|afterEach|require|do';
+  var RE=new RegExp('(\\/\\/[^\\n]*|#(?!\\{)[^\\n]*)|("[^"\\n]*"|\'[^\'\\n]*\'|`[^`]*`)|\\b('+KW+')\\b','g');
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function hl(src){ var out='',last=0,m; RE.lastIndex=0;
+    while((m=RE.exec(src))){ out+=esc(src.slice(last,m.index)); out+= m[1]?'<span class="c">'+esc(m[1])+'</span>': m[2]?'<span class="s">'+esc(m[2])+'</span>':'<span class="k">'+m[3]+'</span>'; last=RE.lastIndex; }
+    return out+esc(src.slice(last)); }
+  var LC={JS:['#2a2510','#f7d046'],TS:['#13243a','#4ea8ff'],JSX:['#102a2a','#4ee6e0'],TSX:['#102a2a','#4ee6e0'],Java:['#2a1a14','#ff7a45'],JUnit:['#2a1a14','#ff7a45'],Ruby:['#3a1624','#ff5c8a'],RSpec:['#3a1624','#ff5c8a'],Bash:['#1a2a1a','#3ddc97'],Rails:['#3a1624','#ff5c8a'],JSON:['#22183a','#a78bfa']};
+  var stage=document.getElementById('stage'), anchor=document.getElementById('bottomBar');
+  CARDS.forEach(function(c){
+    var s=document.createElement('section'); s.className='card'; var h='';
+    if(c.sect){ s.className+=' sect';
+      h='<div class="visual"><div class="num pop">'+c.num+'</div></div>'+(c.badge?'<div class="titlebadge"><i></i>'+c.badge+'</div>':'')+'<div class="kicker">'+c.kicker+'</div><h1>'+c.h+'</h1><p>'+c.p+'</p>'+(c.first?'<div class="tapme">Tap the right side or swipe left →</div>':'');
+    } else if(c.quiz){ s.className+=' quiz'; s.setAttribute('data-quiz','');
+      h='<div class="kicker">'+c.k+'</div><h2>'+c.h+'</h2>'+(c.code?'<div class="qcode">'+hl(c.code)+'</div>':'<div style="height:10px"></div>')+'<div class="opts">'+c.opts.map(function(o,i){return '<button class="opt" type="button" data-ok="'+o[1]+'"><span class="l">'+'ABCD'[i]+'</span>'+o[0]+'</button>';}).join('')+'</div><div class="fb"></div>';
+    } else if(c.recap){
+      h='<div class="kicker">Recap</div><h2>'+c.h+'</h2><ul class="take">'+
+        c.items.map(function(t,i){return '<li class="rise" style="--d:'+(i*0.15)+'s">'+t+'</li>';}).join('')+
+        '</ul><div class="score" id="score"></div><p style="font-size:13px;margin-top:8px">'+c.next+'</p><a class="btn ghost" href="index.html" style="margin-top:6px">← Course home</a>';
+    } else {
+      var inner='';
+      if(c.cmp){ inner='<div class="stack">'+c.cmp.map(function(b,i){ var col=LC[b[0]]||LC.JS; return '<div class="cb rise" style="--d:'+(i*0.25)+'s"><div class="cb-h">'+(b[2]||(i===0?'modern':'compare'))+' <span class="tagc" style="background:'+col[0]+';color:'+col[1]+'">'+b[0]+'</span></div><pre>'+hl(b[1])+'</pre></div>'; }).join('')+'</div>'; }
+      if(c.v){ inner=c.v+inner; }
+      if(c.lab){ s.className+=' lab'; inner='<div class="scrollv demo">'+inner+'</div>'; }
+      h='<div class="kicker">'+c.k+'</div><div class="visual">'+inner+'</div><h2>'+c.h+'</h2>'+(c.p?'<p>'+c.p+'</p>':'')+(c.an?'<div class="analogy"><span>'+c.an+'</span></div>':'');
+    }
+    s.innerHTML=h; if(c.quiz){ var fb=s.querySelector('.fb'); fb.setAttribute('data-right',c.right); fb.setAttribute('data-wrong',c.wrong); }
+    stage.insertBefore(s, anchor);
+  });
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id);};
+  var stage=$('stage'), cards=[].slice.call(document.querySelectorAll('.card')), segsEl=$('segs'), countEl=$('count'), prevBtn=$('prev'), nextBtn=$('next');
+  var cur=0, N=cards.length, answered=0, correct=0, NQ=document.querySelectorAll('[data-quiz]').length;
+  cards.forEach(function(){ var s=document.createElement('div'); s.className='seg'; s.appendChild(document.createElement('i')); segsEl.appendChild(s); });
+  var segs=segsEl.children;
+  function go(n){
+    n=Math.max(0,Math.min(N-1,n));
+    cards.forEach(function(c,k){ c.classList.toggle('past',k<n); if(k!==n) c.classList.remove('active'); c.setAttribute('aria-hidden',k!==n); });
+    var card=cards[n]; card.classList.remove('active'); void card.offsetWidth; card.classList.add('active');
+    for(var k=0;k<N;k++) segs[k].classList.toggle('done',k<=n);
+    countEl.textContent=(n+1)+' / '+N; prevBtn.disabled=n===0; nextBtn.disabled=n===N-1; cur=n; try{var _k='lp:'+location.pathname.split('/').pop(),_o=JSON.parse(localStorage.getItem(_k)||'{}');localStorage.setItem(_k,JSON.stringify({max:Math.max(_o.max||0,n+1),total:N}));}catch(_e){} updateScore();
+    try{ history.replaceState(null,'','#'+(n+1)); }catch(e){}
+  }
+  function next(){ if(cur<N-1) go(cur+1); } function prev(){ if(cur>0) go(cur-1); }
+  prevBtn.addEventListener('click',function(e){e.stopPropagation();prev();});
+  nextBtn.addEventListener('click',function(e){e.stopPropagation();next();});
+  
+  var lastSwipe=0;
+  stage.addEventListener('click',function(e){
+    if(Date.now()-lastSwipe<450) return;
+    if(e.target.closest('button, a, .opts, .demo, textarea, iframe')) return;
+    var r=stage.getBoundingClientRect(); if((e.clientX-r.left)/r.width<0.3) prev(); else next();
+  });
+  var sx=0,sy=0,tr=false;
+  stage.addEventListener('touchstart',function(e){ if(e.target.closest('textarea')) return; var t=e.touches[0]; sx=t.clientX; sy=t.clientY; tr=true; },{passive:true});
+  stage.addEventListener('touchend',function(e){ if(!tr) return; tr=false; var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.2){ lastSwipe=Date.now(); if(dx<0) next(); else prev(); } },{passive:true});
+  document.addEventListener('keydown',function(e){
+    if(e.target.tagName==='TEXTAREA') return;
+    if(e.target.closest&&e.target.closest('button')&&(e.key===' '||e.key==='Enter')) return;
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home') go(0); else if(e.key==='End') go(N-1);
+  });
+  [].forEach.call(document.querySelectorAll('[data-quiz]'),function(q){
+    var opts=q.querySelector('.opts'), fb=q.querySelector('.fb');
+    [].forEach.call(opts.querySelectorAll('.opt'),function(b){
+      b.addEventListener('click',function(e){
+        e.stopPropagation(); if(opts.classList.contains('done')) return;
+        opts.classList.add('done'); answered++;
+        var ok=b.getAttribute('data-ok')==='1'; if(ok) correct++; else b.classList.add('wrong');
+        opts.querySelector('[data-ok="1"]').classList.add('right');
+        fb.innerHTML='<span class="tag" style="color:'+(ok?'var(--green)':'var(--pink)')+'">'+(ok?'✓ Correct.':'✗ Not quite.')+'</span> '+fb.getAttribute(ok?'data-right':'data-wrong')+'<br><span style="color:var(--dim);font-size:12px">Tap or swipe to continue →</span>';
+        fb.classList.add('show');
+      });
+    });
+  });
+  function updateScore(){ var s=$('score'); s.textContent=answered?('Quiz score: '+correct+' / '+NQ+(answered<NQ?' ('+(NQ-answered)+' skipped)':'')):''; }
+
+  var start=parseInt((location.hash||'').slice(1),10); go(isNaN(start)?0:start-1);
+})();
+</script>
