@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#07080d">
+<meta name="theme-color" content="#07080d"><link rel="manifest" href="manifest.json"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Part 1 · How a Web Page Works</title>
 <style>
 :root{
@@ -247,423 +247,274 @@ svg *{transform-box:fill-box;transform-origin:center}
 .sect h1{font-size:clamp(34px,10vw,46px)}
 .sect .num{font:800 90px/1 system-ui;background:linear-gradient(135deg,var(--css),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent;opacity:.9}
 </style>
+<style>
+.card{overflow-y:auto;scrollbar-width:none}.card::-webkit-scrollbar{display:none}
+.card .visual{flex:0 0 auto}
+.cb pre .del{color:var(--pink)}
+.gb{display:flex;flex-direction:column;gap:8px;width:100%}
+.cb.bad{border-color:rgba(255,92,138,.55)}.cb.bad .cb-h{color:var(--pink)}
+.cb.good{border-color:rgba(61,220,151,.55)}.cb.good .cb-h{color:var(--green)}
+.warn{display:flex;gap:10px;align-items:flex-start;background:rgba(255,92,138,.08);border:1px solid rgba(255,92,138,.35);border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.45;color:#f1d3dc;margin-top:6px}
+.warn::before{content:"⚠";color:var(--pink)}
+.warn b{color:#fff}.warn code,.take code{background:#1b2131;padding:1px 4px;border-radius:5px;color:#dfe5f5;font-size:.9em}
+.steps{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:15px;line-height:1.5}
+.steps li{margin:2px 0}.steps b{color:var(--text)}.steps code{background:#1b2131;padding:1px 4px;border-radius:5px;color:#dfe5f5;font-size:.88em}
+.links{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:10px}
+.links a{display:block;text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--text)}
+.links a b{display:block;font-size:15px;margin-bottom:3px}
+.links a span{font-size:13px;color:var(--muted);line-height:1.4;display:block}
+.links a i{font-style:normal;font:700 10px var(--mono);color:var(--cyan);letter-spacing:.04em;text-transform:uppercase}
+.run textarea{width:100%;min-height:120px;background:#0d111b;color:#cdd5ea;border:1px solid var(--line);border-radius:12px;font:11.5px/1.5 var(--mono);padding:9px 10px;resize:vertical;user-select:text;-webkit-user-select:text}
+.run .rowb{display:flex;gap:8px;align-items:center}
+.run .log{min-height:60px;white-space:pre-wrap}
+.run .log .er{color:var(--pink)}
+.el{width:100%;display:flex;flex-direction:column;gap:8px}
+.el pre{margin:0;font:11px/1.55 var(--mono);background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:8px 10px;color:#cdd5ea;white-space:pre;overflow-x:auto}
+.el pre .ln{display:block;border-radius:4px;transition:background .25s}
+.el pre .ln.on{background:rgba(247,208,70,.2);box-shadow:inset 3px 0 0 var(--js)}
+.el .cols{display:grid;grid-template-columns:repeat(var(--n,4),1fr);gap:6px}
+.el .col{background:#0d111b;border:1px solid var(--line);border-radius:10px;min-height:86px;padding:5px;display:flex;flex-direction:column;gap:4px}
+.el .col h4{margin:0 0 2px;font:700 8.5px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:center}
+.el .col.stackc{flex-direction:column-reverse;justify-content:flex-start}.el .col.stackc h4{order:99}
+.el .chip{font:700 9.5px/1.25 var(--mono);padding:4px 5px;border-radius:7px;color:#0b0e16;text-align:center;animation:pop .4s both;word-break:break-word}
+.el .note{font-size:13px;color:#cfd6ea;min-height:38px;line-height:1.4;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.el .rowb{display:flex;gap:8px;justify-content:center}
+.el .stepn{font:11px var(--mono);color:var(--dim);align-self:center}
+.bub{width:100%;display:flex;flex-direction:column;gap:8px}
+.bub .lvl{border:2px solid var(--line);border-radius:12px;padding:10px;font:700 10px var(--mono);color:var(--muted);transition:background .2s,border-color .2s}
+.bub .lvl.hit{border-color:var(--js);background:rgba(247,208,70,.14);color:var(--js)}
+.bub .lvl.cap{border-color:var(--css);background:rgba(78,168,255,.14);color:var(--css)}
+.bub button.tgt{all:unset;cursor:pointer;display:block;margin-top:8px;background:var(--html);color:#1a0b04;border-radius:8px;padding:8px;text-align:center}
+.cas{width:100%;display:flex;flex-direction:column;gap:6px}
+.cas .r{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#0d111b;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font:11px var(--mono);color:#cdd5ea;transition:.3s}
+.cas .r.win{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset}
+.cas .r.lose{opacity:.45;text-decoration:line-through}
+.cas .sp{font:700 10px var(--mono);color:var(--js)}
+.pstate{width:100%;display:flex;flex-direction:column;gap:10px;align-items:center}
+.pstate .pb{display:flex;gap:10px;align-items:center;justify-content:center;width:100%}
+.pstate .st{padding:8px 12px;border-radius:12px;font:700 12px var(--mono);border:1px solid var(--line);background:var(--panel);color:var(--muted);transition:.3s}
+.pstate .st.on.p{background:rgba(247,208,70,.18);border-color:var(--js);color:var(--js)}
+.pstate .st.on.f{background:rgba(61,220,151,.18);border-color:var(--green);color:var(--green)}
+.pstate .st.on.r{background:rgba(255,92,138,.18);border-color:var(--pink);color:var(--pink)}
+.timeline{width:100%;display:flex;flex-direction:column;gap:6px;font:10.5px var(--mono);color:var(--muted)}
+.timeline .tr{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:6px}
+.timeline .bar{height:16px;border-radius:5px;background:var(--c);transform-origin:left center;margin-left:var(--s,0);width:var(--w);color:#0b0e16;font-weight:700;font-size:9px;display:flex;align-items:center;padding-left:5px}
+.active .timeline .bar{animation:growx .7s ease both;animation-delay:var(--d,0s)}
+.refs{width:100%;display:flex;gap:16px;align-items:center;justify-content:center}
+.refs .vars,.refs .heap{display:flex;flex-direction:column;gap:8px}
+.refs .v,.refs .o{font:700 11px var(--mono);padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel)}
+.refs .o{background:#0f2a20;border-color:var(--green);color:var(--green);transition:.3s}
+.refs .o.flash{animation:flash .9s}
+</style>
 <div class="app">
 <main class="stage" id="stage">
   <div class="top">
     <div class="segs" id="segs"></div>
-    <div class="meta"><span><b>Part 1</b> · How a web page works</span><a href="index.html" style="color:var(--muted);text-decoration:none;margin-left:auto;margin-right:10px">⌂ home</a><span id="count" aria-live="polite">1 / 30</span></div>
+    <div class="meta"><span><b>Part 1</b> · How a web page works</span><a href="index.html" style="color:var(--muted);text-decoration:none;margin-left:auto;margin-right:10px">⌂ home</a><span id="count" aria-live="polite">1 / 50</span></div>
   </div>
+<section class="card sect"><div class="visual"><div class="num pop">1</div></div><div class="titlebadge"><i></i>~30 min · 50 cards · 6 sections · live demos</div><div class="kicker">Section 1 of 6</div><h1>HTML: <span class="grad">structure &amp; meaning</span></h1><p>A page is three languages with three jobs: HTML for structure, CSS for looks, JS for behavior. We start with HTML, which is more than "tags that make boxes".</p><div class="tapme">Tap the right side or swipe left →</div></section>
+<section class="card"><div class="kicker">HTML · anatomy</div><div class="visual"><div class="stack"><div class="cb rise " style="--d:0s"><div class="cb-h">project-card.html</div><pre>&lt;article <span class="k">class</span>=<span class="s">"card"</span> id=<span class="s">"p-42"</span> data-status=<span class="s">"open"</span>&gt;
+  &lt;h3&gt;Riverside Tower&lt;/h3&gt;
+  &lt;p&gt;7 open items · due &lt;time datetime=<span class="s">"2026-11-01"</span>&gt;Nov 1&lt;/time&gt;&lt;/p&gt;
+  &lt;img src=<span class="s">"tower.jpg"</span> alt=<span class="s">"Tower crane at dusk"</span>&gt;
+  &lt;button <span class="k">type</span>=<span class="s">"button"</span>&gt;Mark done&lt;/button&gt;
+&lt;/article&gt;</pre></div></div></div><h2>Elements, attributes, nesting</h2><p>An <b>element</b> is an opening tag, content and a closing tag. <b>Attributes</b> add data. Elements nest into a tree. Some are <b>void</b> and have no content (<code>&lt;img&gt;</code>, <code>&lt;input&gt;</code>).</p><p><code>class</code> is for styling/selection, <code>id</code> must be unique on the page, and <code>data-*</code> holds custom data that JS can read via <code>el.dataset.status</code>.</p></section>
+<section class="card"><div class="kicker">Semantics</div><h2>Pick elements for meaning, not looks</h2><p>Every element has built-in meaning that browsers, screen readers, search engines and tests rely on. Looks come from CSS, so choose by <b>what it is</b>:</p><ol class="steps"><li><code>&lt;header&gt; &lt;nav&gt; &lt;main&gt; &lt;aside&gt; &lt;footer&gt;</code>: page landmarks (screen-reader users jump between them).</li><li><code>&lt;h1&gt;…&lt;h6&gt;</code>: an outline, in order. Don't skip levels for font size.</li><li><code>&lt;button&gt;</code> does something; <code>&lt;a href&gt;</code> goes somewhere. <code>&lt;ul&gt;/&lt;li&gt;</code> for lists, <code>&lt;table&gt;</code> for tabular data, <code>&lt;label&gt;</code> for every input.</li></ol></section>
+<section class="card"><div class="kicker">Semantics · why it matters</div><div class="visual"><div class="stack"><div class="cb rise bad" style="--d:0s"><div class="cb-h">✗ What AI often writes</div><pre>&lt;div <span class="k">class</span>=<span class="s">"btn"</span> onclick=<span class="s">"save()"</span>&gt;Save&lt;/div&gt;
+<span class="c">&lt;!-- not focusable, no Enter/Space, not announced as a button --&gt;</span>
+&lt;div onclick=<span class="s">"go('/projects')"</span>&gt;Projects&lt;/div&gt;   <span class="c">&lt;!-- no new tab, no link semantics --&gt;</span>
+&lt;input placeholder=<span class="s">"Email"</span>&gt;                      <span class="c">&lt;!-- placeholder is not a label --&gt;</span></pre></div><div class="cb rise good" style="--d:0.2s"><div class="cb-h">✓ What good looks like</div><pre>&lt;button <span class="k">type</span>=<span class="s">"button"</span> onClick={save}&gt;Save&lt;/button&gt;
+&lt;a href=<span class="s">"/projects"</span>&gt;Projects&lt;/a&gt;
+&lt;label&gt;Email &lt;input <span class="k">type</span>=<span class="s">"email"</span> name=<span class="s">"email"</span> autoComplete=<span class="s">"email"</span> /&gt;&lt;/label&gt;</pre></div></div></div><h2>A real <code>&lt;button&gt;</code> gives you a lot for free</h2><div class="warn"><span>"div soup" with click handlers is one of the most common problems in AI-generated UI. It also breaks tests that query by role (<code>getByRole("button")</code>).</span></div></section>
+<section class="card"><div class="kicker">Forms</div><div class="visual"><div class="stack"><p>A <code>&lt;button&gt;</code> inside a form defaults to <code>type="submit"</code>. In React you usually handle <code>onSubmit</code> and call <code>e.preventDefault()</code> to stop the full-page reload.</p></div></div><h2>Forms do a lot natively</h2><div class="cb rise " style="--d:0s"><div class="cb-h">native form</div><pre>&lt;form action=<span class="s">"/search"</span> method=<span class="s">"get"</span>&gt;
+  &lt;label <span class="k">for</span>=<span class="s">"q"</span>&gt;Search&lt;/label&gt;
+  &lt;input id=<span class="s">"q"</span> name=<span class="s">"q"</span> required minlength=<span class="s">"2"</span>&gt;
+  &lt;select name=<span class="s">"status"</span>&gt;&lt;option&gt;open&lt;/option&gt;&lt;option&gt;closed&lt;/option&gt;&lt;/select&gt;
+  &lt;button&gt;Go&lt;/button&gt;        <span class="c">&lt;!-- default type="submit" inside a form! --&gt;</span>
+&lt;/form&gt;</pre></div><div class="warn"><span>Gotcha: a "Cancel" button inside a form without <code>type="button"</code> <b>submits the form</b>.</span></div></section>
+<section class="card quiz" data-quiz><div class="kicker">Quiz 1 / 6 · semantics</div><h2>Which is the best markup for a clickable "Delete" action?</h2><div class="opts"><button class="opt" type="button" data-ok="0"><span class="l">A</span><code>&lt;div onclick&gt;Delete&lt;/div&gt;</code></button><button class="opt" type="button" data-ok="0"><span class="l">B</span><code>&lt;a href="#"&gt;Delete&lt;/a&gt;</code></button><button class="opt" type="button" data-ok="1"><span class="l">C</span><code>&lt;button type="button"&gt;Delete&lt;/button&gt;</code></button></div><div class="fb" data-right="An action is a button: focusable, keyboard-operable and announced correctly for free." data-wrong="Use &lt;b&gt;&amp;lt;button type=&quot;button&quot;&amp;gt;&lt;/b&gt;. Links navigate; a div needs tabindex, role and key handlers just to imitate a button."></div></section>
+<section class="card"><div class="kicker">Go deeper · HTML</div><h2>Want more on HTML?</h2><p>Optional. Each link is worth the time; start with the first.</p><ul class="links"><li class="rise" style="--d:0.0s"><a href="https://frontendmasters.com/courses/web-development-v3/" target="_blank" rel="noopener"><i>Frontend Masters</i><b>Complete Intro to Web Development, v3 (Brian Holt)</b><span>HTML, CSS and JS from zero, fast-paced and practical.</span></a></li><li class="rise" style="--d:0.15s"><a href="https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Accessibility/HTML" target="_blank" rel="noopener"><i>MDN</i><b>HTML: a good basis for accessibility</b><span>Why semantic elements matter, with the button-vs-div example in depth.</span></a></li><li class="rise" style="--d:0.3s"><a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements" target="_blank" rel="noopener"><i>MDN</i><b>HTML elements reference</b><span>Every element grouped by purpose.</span></a></li></ul></section>
+<section class="card sect"><div class="visual"><div class="num pop">2</div></div><div class="kicker">Section 2 of 6</div><h1>The <span class="grad">DOM</span></h1><p>The browser parses HTML into a tree of live objects. JS reads and changes that tree; the screen follows.</p></section>
+<section class="card"><div class="kicker">DOM · what it is</div><div class="visual"><div class="stack"><div class="tree rise">document
+ └─ html
+     ├─ head
+     └─ body
+         └─ article.card#p-42
+             ├─ h3 ── "Riverside Tower"
+             ├─ p  ── "7 open items"
+             └─ button ── "Mark done"</div></div></div><h2>HTML text → a tree of objects</h2><p>The browser reads the HTML <b>once</b> and builds the <b>Document Object Model</b>: one node per element, text run and attribute. After that, the HTML file doesn't matter: the page <b>is</b> the DOM. Change the DOM and the browser re-renders.</p><div class="analogy"><span>Like an ORM's in-memory object graph: you mutate objects, and the system handles the output (here, pixels instead of SQL).</span></div></section>
+<section class="card"><div class="kicker">DOM · reading</div><div class="visual"><div class="stack"><div class="warn"><span><code>querySelector</code> returns <code>null</code> when nothing matches, so <code>document.querySelector(".x").textContent</code> throws if the element isn't there yet (for example, if the script ran before the HTML was parsed).</span></div></div></div><h2>Finding elements</h2><div class="demo run"><textarea spellcheck="false">document.body.insertAdjacentHTML('beforeend',
+  '&lt;ul id="demo-list" hidden&gt;&lt;li class="rfi"&gt;A&lt;/li&gt;&lt;li class="rfi open"&gt;B&lt;/li&gt;&lt;li class="rfi open"&gt;C&lt;/li&gt;&lt;/ul&gt;');
+const list = document.querySelector('#demo-list');      // first match (CSS selector) or null
+const open = list.querySelectorAll('.rfi.open');         // static NodeList
+console.log(open.length, [...open].map(li =&gt; li.textContent));
+console.log(list.children.length, list.firstElementChild.textContent);
+console.log(open[0].closest('ul').id);                   // walk up to an ancestor
+list.remove();</textarea><div class="rowb"><button class="btn" type="button" data-run>▶ Run it</button><button class="btn ghost" type="button" data-reset>↺ reset</button></div><div class="log" aria-live="polite"></div></div></section>
+<section class="card"><div class="kicker">DOM · writing</div><div class="visual"><div class="stack"><p>Core toolkit: <code>createElement</code>, <code>append</code>, <code>remove</code>, <code>textContent</code>, <code>classList</code>, <code>setAttribute</code>, <code>dataset</code>, <code>hidden</code>.</p></div></div><h2>Changing the tree</h2><div class="demo run"><textarea spellcheck="false">const ul = document.createElement('ul');
+for (const name of ['Tower', 'Bridge']) {
+  const li = document.createElement('li');
+  li.textContent = name;                // safe: text, never parsed as HTML
+  li.classList.add('project');
+  li.dataset.id = name.toLowerCase();   // → data-id="tower"
+  ul.append(li);
+}
+ul.firstElementChild.classList.toggle('done');
+console.log(ul.outerHTML);</textarea><div class="rowb"><button class="btn" type="button" data-run>▶ Run it</button><button class="btn ghost" type="button" data-reset>↺ reset</button></div><div class="log" aria-live="polite"></div></div></section>
+<section class="card"><div class="kicker">DOM · security</div><div class="visual"><div class="stack"><div class="cb rise bad" style="--d:0s"><div class="cb-h">✗ What AI often writes</div><pre>el.innerHTML = <span class="s">`&lt;b&gt;${comment.author}&lt;/b&gt;: ${comment.body}`</span>;
+<span class="c">// body = '&lt;img src=x onerror="steal(document.cookie)"&gt;' → runs!</span>
+&lt;div dangerouslySetInnerHTML={{ __html: comment.body }} /&gt;  <span class="c">// React's version</span></pre></div><div class="cb rise good" style="--d:0.2s"><div class="cb-h">✓ What good looks like</div><pre>el.textContent = comment.body;            <span class="c">// treated as text</span>
+&lt;p&gt;{comment.body}&lt;/p&gt;                      <span class="c">// React escapes {} for you</span>
+<span class="c">// if you truly must render HTML: sanitize it first (e.g. DOMPurify)</span></pre></div></div></div><h2><code>innerHTML</code> with user data = XSS</h2><div class="warn"><span><code>innerHTML</code>, <code>outerHTML</code>, <code>insertAdjacentHTML</code> and <code>dangerouslySetInnerHTML</code> with untrusted data are review blockers.</span></div></section>
+<section class="card"><div class="kicker">DOM · attributes vs properties</div><div class="visual"><div class="stack"><p>Attributes are the initial markup; properties are the live state. React sets <b>properties</b>, which is why you write <code>value</code>, <code>checked</code> and <code>className</code>.</p></div></div><h2>Two views of the same element</h2><div class="demo run"><textarea spellcheck="false">const input = document.createElement('input');
+input.setAttribute('value', 'initial');   // the HTML attribute = default
+input.value = 'typed by user';            // the live DOM property = current
+console.log(input.getAttribute('value'), '|', input.value);
+const cb = document.createElement('input'); cb.type = 'checkbox';
+cb.checked = true;
+console.log(cb.hasAttribute('checked'), cb.checked);  // false true</textarea><div class="rowb"><button class="btn" type="button" data-run>▶ Run it</button><button class="btn ghost" type="button" data-reset>↺ reset</button></div><div class="log" aria-live="polite"></div></div></section>
+<section class="card"><div class="kicker">DOM · performance</div><div class="visual"><div class="stack"><p>Reading geometry (<code>offsetWidth</code>, <code>getBoundingClientRect</code>) right after a write makes the browser compute layout immediately. Batch reads, then writes. Frameworks batch writes for you.</p></div></div><h2>DOM writes are cheap; forced layout is not</h2><div class="cb rise bad" style="--d:0s"><div class="cb-h">✗ What AI often writes</div><pre><span class="k">for</span> (<span class="k">const</span> row <span class="k">of</span> rows) {
+  row.style.width = container.offsetWidth + <span class="s">'px'</span>;  <span class="c">// read → write → read → write…</span>
+}   <span class="c">// each read after a write forces a synchronous layout ("layout thrashing")</span></pre></div><div class="cb rise good" style="--d:0.2s"><div class="cb-h">✓ What good looks like</div><pre><span class="k">const</span> w = container.offsetWidth;                   <span class="c">// read once</span>
+<span class="k">for</span> (<span class="k">const</span> row <span class="k">of</span> rows) row.style.width = w + <span class="s">'px'</span>; <span class="c">// then write</span></pre></div></section>
+<section class="card quiz" data-quiz><div class="kicker">Quiz 2 / 6 · DOM</div><h2>What happens?</h2><div class="qcode">&lt;script&gt;
+  document.querySelector(<span class="s">'#app'</span>).textContent = <span class="s">'Hi'</span>;
+&lt;/script&gt;
+&lt;div id=<span class="s">"app"</span>&gt;&lt;/div&gt;</div><div class="opts"><button class="opt" type="button" data-ok="0"><span class="l">A</span>Shows "Hi"</button><button class="opt" type="button" data-ok="1"><span class="l">B</span>TypeError: cannot set properties of null</button><button class="opt" type="button" data-ok="0"><span class="l">C</span>Nothing, silently</button></div><div class="fb" data-right="The script runs while parsing, before &lt;code&gt;#app&lt;/code&gt; exists, so &lt;code&gt;querySelector&lt;/code&gt; returns null. Use &lt;code&gt;defer&lt;/code&gt;, a module script, or put the script at the end." data-wrong="It throws. When the script runs, the div hasn&#x27;t been parsed yet; &lt;code&gt;querySelector&lt;/code&gt; returns &lt;code&gt;null&lt;/code&gt;."></div></section>
+<section class="card"><div class="kicker">Go deeper · the DOM</div><h2>Want more on the DOM?</h2><p>Optional. Each link is worth the time; start with the first.</p><ul class="links"><li class="rise" style="--d:0.0s"><a href="https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model" target="_blank" rel="noopener"><i>MDN</i><b>Document Object Model (DOM)</b><span>The DOM's concepts and interfaces, with guides on traversing and manipulating it.</span></a></li><li class="rise" style="--d:0.15s"><a href="https://frontendmasters.com/courses/getting-started-javascript-v3/" target="_blank" rel="noopener"><i>Frontend Masters</i><b>Learn to Code with JavaScript (Getting Started, v3)</b><span>Beginner-friendly JS with lots of hands-on DOM work.</span></a></li></ul></section>
+<section class="card sect"><div class="visual"><div class="num pop">3</div></div><div class="kicker">Section 3 of 6</div><h1>CSS: the cascade &amp; <span class="grad">the box model</span></h1><p>How the browser decides which rule wins, and how big every box really is.</p></section>
+<section class="card"><div class="kicker">CSS · rules</div><div class="visual"><div class="stack"><p>A <b>selector</b> picks elements; each <b>declaration</b> sets one property. <code>:hover</code> is a pseudo-class (a state), <code>::before</code> a pseudo-element (a generated part).</p></div></div><h2>Selector + declarations</h2><div class="cb rise " style="--d:0s"><div class="cb-h">selectors</div><pre><span class="c">/* selector       { property: value; } */</span>
+.card h3          { font-size: 18px; }      <span class="c">/* descendant */</span>
+.card &gt; button    { margin-top: 8px; }      <span class="c">/* direct child */</span>
+.card.done        { opacity: .6; }          <span class="c">/* both classes */</span>
+button:hover, button:focus-visible { outline: 2px solid; }
+input[<span class="k">type</span>=<span class="s">"email"</span>] { width: 100%; }         <span class="c">/* attribute */</span>
+li:nth-child(odd) { background: #f4f5f9; }</pre></div></section>
+<section class="card"><div class="kicker">The cascade</div><div class="visual"><div class="stack"><div class="demo cas" id="cas"><div class="r" data-s="0,0,1"><span>p { color: gray }</span><span class="sp">0-0-1</span></div><div class="r" data-s="0,1,0"><span>.note { color: blue }</span><span class="sp">0-1-0</span></div><div class="r" data-s="0,1,1"><span>.card p { color: green }</span><span class="sp">0-1-1</span></div><div class="r" data-s="1,0,0"><span>#intro { color: red }</span><span class="sp">1-0-0</span></div><div class="tg"><button type="button" id="casBtn">▶ resolve: &lt;p id="intro" class="note"&gt;</button></div></div></div></div><h2>When two rules disagree</h2><p>For each property on each element, the browser collects every matching declaration and picks a winner in this order:</p><ol class="steps"><li><b>Origin &amp; importance</b>: <code>!important</code> beats normal declarations (avoid it).</li><li><b>Cascade layers</b> (<code>@layer</code>), if used.</li><li><b>Specificity</b>: inline style &gt; #id &gt; .class / [attr] / :pseudo &gt; tag.</li><li><b>Source order</b>: if still tied, the <b>last</b> one wins.</li></ol></section>
+<section class="card"><div class="kicker">Inheritance</div><div class="visual"><div class="stack"><div class="cb rise " style="--d:0s"><div class="cb-h">inheritance</div><pre>body { font-family: system-ui; color: #222; }  <span class="c">/* every descendant inherits */</span>
+.card { border: 1px solid #ddd; }              <span class="c">/* children don't get borders */</span>
+button { font: inherit; }                      <span class="c">/* form controls don't inherit fonts by default */</span></pre></div></div></div><h2>Some properties flow down the tree</h2><p>Text properties (<code>color</code>, <code>font-*</code>, <code>line-height</code>) are <b>inherited</b> by children. Box properties (<code>margin</code>, <code>border</code>, <code>width</code>) are not. Set fonts once on <code>body</code>; that's why it works.</p><div class="warn"><span>Specificity wars are the usual CSS smell: <code>!important</code>, long chains like <code>.page .main .card .title span</code>, or <code>#id</code> selectors in components. Modern React styles are usually scoped (CSS Modules, utility classes, CSS-in-JS) so this matters less, but you'll still see it in overrides.</span></div></section>
+<section class="card"><div class="kicker">Box model</div><div class="visual"><div class="stack"><div class="demo"><div class="bm" id="bm"><div class="bm-m"><div class="bm-b"><div class="bm-p"><div class="bm-c">content</div></div></div></div></div><div class="tg" id="bmTg"><button type="button" data-v="--m" data-a="16px,4px,28px">margin: 16px</button><button type="button" data-v="--b" data-a="4px,1px,10px">border: 4px</button><button type="button" data-v="--p" data-a="14px,2px,28px">padding: 14px</button></div></div></div></div><h2>Every element is a box</h2><p>From inside out: <b>content</b>, <b>padding</b> (inside the border, takes background), <b>border</b>, <b>margin</b> (outside, transparent). Tap the values:</p></section>
+<section class="card"><div class="kicker">Box model · box-sizing</div><div class="visual"><div class="stack"><div class="warn"><span>Vertical margins between blocks <b>collapse</b>: 20px below one paragraph and 30px above the next gives 30px, not 50px. It doesn't happen inside flex or grid containers, a common source of "why is this spacing different?".</span></div></div></div><h2>What does <code>width</code> mean?</h2><div class="cb rise " style="--d:0s"><div class="cb-h">box-sizing</div><pre>.a { width: 200px; padding: 20px; border: 2px solid; }
+<span class="c">/* box-sizing: content-box (the default): rendered width = 200 + 40 + 4 = 244px */</span>
+<span class="c">/* box-sizing: border-box: rendered width = 200px; content shrinks to 156px */</span>
 
-  <!-- S1 TITLE -->
-  <section class="card sect">
-    <div class="visual"><div class="num pop">1</div></div>
-    <div class="titlebadge"><i></i>~12 min · 30 cards · 5 sections · 5 quizzes</div>
-    <div class="kicker">Section 1 of 5</div>
-    <h1>Three languages, <span class="grad">three jobs</span></h1>
-    <p>No frameworks yet. We'll build one Procore-style <b>Project card</b> in three layers: <span class="hl-html">HTML</span> for structure, <span class="hl-css">CSS</span> for looks, <span class="hl-js">JS</span> for behavior.</p>
-    <div class="tapme">Tap the right side or swipe left →</div>
-  </section>
+*, *::before, *::after { box-sizing: border-box; }  <span class="c">/* in nearly every reset */</span></pre></div></section>
+<section class="card"><div class="kicker">Display &amp; units</div><h2>block, inline, and how big is 1rem?</h2><ol class="steps"><li><b>block</b> (<code>div, p, h1</code>): starts on a new line, fills the width.</li><li><b>inline</b> (<code>span, a</code>): flows in text; width/height and vertical margin are ignored.</li><li><b>inline-block</b>, <b>flex</b>, <b>grid</b>, <b>none</b> (removed from layout).</li></ol><p>Units: <code>px</code> fixed; <code>rem</code> relative to the root font size (respects user zoom settings); <code>%</code> of the parent; <code>vh/vw</code> of the viewport; <code>fr</code> grid fractions.</p></section>
+<section class="card quiz" data-quiz><div class="kicker">Quiz 3 / 6 · cascade</div><h2><code>&lt;p id="x" class="note"&gt;</code>: which color wins?</h2><div class="qcode">#x      { color: red; }
+.note   { color: blue; }
+p.note  { color: green; }</div><div class="opts"><button class="opt" type="button" data-ok="0"><span class="l">A</span>green: it's last</button><button class="opt" type="button" data-ok="1"><span class="l">B</span>red: the id is most specific</button><button class="opt" type="button" data-ok="0"><span class="l">C</span>blue</button></div><div class="fb" data-right="Specificity is compared before source order: one id (1-0-0) beats any number of classes and tags." data-wrong="It&#x27;s &lt;b&gt;red&lt;/b&gt;. Source order only breaks ties; &lt;code&gt;#x&lt;/code&gt; has higher specificity than &lt;code&gt;p.note&lt;/code&gt; (0-1-1)."></div></section>
+<section class="card"><div class="kicker">Go deeper · the cascade &amp; box model</div><h2>Want more on the cascade &amp; box model?</h2><p>Optional. Each link is worth the time; start with the first.</p><ul class="links"><li class="rise" style="--d:0.0s"><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Cascade/Specificity" target="_blank" rel="noopener"><i>MDN</i><b>Specificity</b><span>How specificity is calculated, with worked examples.</span></a></li><li class="rise" style="--d:0.15s"><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Cascade/Introduction" target="_blank" rel="noopener"><i>MDN</i><b>Introduction to the CSS cascade</b><span>Origins, layers, importance and order: the full algorithm.</span></a></li><li class="rise" style="--d:0.3s"><a href="https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Styling_basics/Box_model" target="_blank" rel="noopener"><i>MDN</i><b>The box model</b><span>Content, padding, border, margin, box-sizing and margin collapsing.</span></a></li></ul></section>
+<section class="card sect"><div class="visual"><div class="num pop">4</div></div><div class="kicker">Section 4 of 6</div><h1>Layout: <span class="grad">Flexbox &amp; Grid</span></h1><p>Two layout systems cover almost everything. Flexbox arranges items along one line; Grid places them in rows and columns.</p></section>
+<section class="card"><div class="kicker">Flexbox · axes</div><div class="visual"><div class="stack"><div class="demo"><div class="flexbox" id="fx"><div>A</div><div style="min-height:50px">B</div><div>C</div></div><div class="tg" id="fxTg"><button type="button" data-p="flexDirection" data-a="row,column">direction</button><button type="button" data-p="justifyContent" data-a="flex-start,center,space-between,flex-end">justify</button><button type="button" data-p="alignItems" data-a="stretch,center,flex-start,flex-end">align</button></div><div class="rx-note" id="fxNote">flex-direction:row; justify-content:flex-start; align-items:stretch</div></div></div></div><h2>Main axis and cross axis</h2><p><code>display:flex</code> on a parent lays out its <b>direct children</b> along the <b>main axis</b> (row by default). <code>justify-content</code> distributes along the main axis; <code>align-items</code> aligns on the cross axis. Tap to cycle:</p></section>
+<section class="card"><div class="kicker">Flexbox · sizing</div><div class="visual"><div class="stack"><div class="warn"><span>Flex items default to <code>min-width: auto</code>, so long text <b>refuses to shrink</b> and overflows. The fix is <code>min-width: 0</code> on the item. Use <code>gap</code>, not margins, for spacing between items.</span></div></div></div><h2>flex: grow shrink basis</h2><div class="cb rise " style="--d:0s"><div class="cb-h">flex</div><pre>.toolbar { display: flex; gap: 8px; align-items: center; }
+.toolbar .search { flex: 1; }          <span class="c">/* = 1 1 0%: take the leftover space */</span>
+.toolbar .logo   { flex: none; }       <span class="c">/* never grow or shrink */</span>
+.row             { flex-wrap: wrap; }  <span class="c">/* allow multiple lines */</span>
+.title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }</pre></div></section>
+<section class="card"><div class="kicker">Grid</div><div class="visual"><div class="stack"><div class="demo"><div class="gridbox" id="gd"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div></div><div class="tg" id="gdTg"><button type="button" class="on" data-c="repeat(3, 1fr)">repeat(3, 1fr)</button><button type="button" data-c="200px 1fr">200px 1fr</button><button type="button" data-c="1fr 2fr 1fr">1fr 2fr 1fr</button><button type="button" data-c="repeat(auto-fill, minmax(60px, 1fr))">auto-fill</button></div><div class="rx-note" id="gdNote">grid-template-columns: repeat(3, 1fr)</div></div></div></div><h2>Rows and columns, defined by the parent</h2><p>The <b>parent</b> defines the tracks; children fill the cells in order, or are placed explicitly. Tap a template:</p></section>
+<section class="card"><div class="kicker">Grid · areas &amp; responsiveness</div><div class="visual"><div class="stack"><p><b>Flex or Grid?</b> Content-sized items in a line (toolbars, button groups, chips) → Flex. Aligned rows <i>and</i> columns (page shells, card grids, forms) → Grid.</p></div></div><h2>Whole-page layout in a few lines</h2><div class="cb rise " style="--d:0s"><div class="cb-h">grid areas</div><pre>.page {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-areas: <span class="s">"nav header"</span> <span class="s">"nav main"</span>;
+  min-height: 100vh;
+}
+.page &gt; nav  { grid-area: nav; }
+.page &gt; main { grid-area: main; }
+@media (max-width: 700px) {                    <span class="c">/* phones: one column */</span>
+  .page { grid-template-columns: 1fr; grid-template-areas: <span class="s">"header"</span> <span class="s">"main"</span>; }
+  .page &gt; nav { display: none; }
+}</pre></div></section>
+<section class="card"><div class="kicker">Layout · review</div><div class="visual"><div class="stack"><div class="cb rise bad" style="--d:0s"><div class="cb-h">✗ What AI often writes</div><pre>.card { position: absolute; top: 112px; left: 340px; width: 387px; }
+.title { margin-left: 13px; margin-top: -3px; }   <span class="c">/* magic numbers */</span>
+.item:not(:last-child) { margin-right: 8px; }</pre></div><div class="cb rise good" style="--d:0.2s"><div class="cb-h">✓ What good looks like</div><pre>.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.card  { padding: <span class="k">var</span>(--space-4); }               <span class="c">/* design tokens */</span>
+.row   { display: flex; gap: 8px; }</pre></div></div></div><h2>What good CSS looks like vs AI-typical</h2><div class="warn"><span>Flag absolute positioning for normal layout, fixed pixel widths that break on phones, negative-margin hacks, and hard-coded colors/spacing where the codebase has tokens.</span></div></section>
+<section class="card quiz" data-quiz><div class="kicker">Quiz 4 / 6 · flexbox</div><h2>A long project name pushes a flex row off-screen. Best fix?</h2><div class="qcode">.row { display: flex; }
+.name { flex: 1; }</div><div class="opts"><button class="opt" type="button" data-ok="0"><span class="l">A</span><code>.name { width: 100px }</code></button><button class="opt" type="button" data-ok="1"><span class="l">B</span><code>.name { min-width: 0 }</code> + ellipsis</button><button class="opt" type="button" data-ok="0"><span class="l">C</span><code>.row { overflow: hidden }</code></button></div><div class="fb" data-right="Flex items won&#x27;t shrink below their content size unless you set &lt;code&gt;min-width: 0&lt;/code&gt;." data-wrong="It&#x27;s &lt;b&gt;min-width: 0&lt;/b&gt;. The default &lt;code&gt;min-width: auto&lt;/code&gt; stops a flex item from shrinking smaller than its text."></div></section>
+<section class="card"><div class="kicker">Go deeper · layout</div><h2>Want more on layout?</h2><p>Optional. Each link is worth the time; start with the first.</p><ul class="links"><li class="rise" style="--d:0.0s"><a href="https://frontendmasters.com/courses/css-grid/" target="_blank" rel="noopener"><i>Frontend Masters</i><b>CSS Grid: from basic to complex responsive layouts</b><span>Flexbox, Grid, container queries and subgrid through real responsive layouts.</span></a></li><li class="rise" style="--d:0.15s"><a href="https://www.joshwcomeau.com/css/interactive-guide-to-flexbox/" target="_blank" rel="noopener"><i>Article</i><b>An Interactive Guide to Flexbox (Josh W. Comeau)</b><span>The best mental model for flex sizing, with live widgets.</span></a></li><li class="rise" style="--d:0.3s"><a href="https://css-tricks.com/complete-guide-css-grid-layout/" target="_blank" rel="noopener"><i>CSS-Tricks</i><b>A Complete Guide to CSS Grid</b><span>The visual reference most developers keep open.</span></a></li></ul></section>
+<section class="card sect"><div class="visual"><div class="num pop">5</div></div><div class="kicker">Section 5 of 6</div><h1><span class="grad">Events</span>: bubbling &amp; delegation</h1><p>Clicks, keys and inputs become event objects that travel through the DOM tree. Knowing the route explains a lot of odd UI bugs.</p></section>
+<section class="card"><div class="kicker">Events · listeners</div><div class="visual"><div class="stack"><p>The handler gets an <b>event object</b>: <code>type</code>, <code>target</code>, <code>currentTarget</code>, key/mouse info, and methods like <code>preventDefault()</code>. Handlers run on the main thread, one at a time.</p></div></div><h2>addEventListener</h2><div class="demo run"><textarea spellcheck="false">const btn = document.createElement('button');
+function onClick(e) {
+  console.log(e.type, 'on', e.currentTarget.tagName, 'detail', e.detail);
+}
+btn.addEventListener('click', onClick);
+btn.click();                                 // simulate a click
+btn.removeEventListener('click', onClick);   // needs the SAME function reference
+btn.click();                                 // nothing logged
+btn.addEventListener('click', () =&gt; console.log('once!'), { once: true });
+btn.click(); btn.click();</textarea><div class="rowb"><button class="btn" type="button" data-run>▶ Run it</button><button class="btn ghost" type="button" data-reset>↺ reset</button></div><div class="log" aria-live="polite"></div></div></section>
+<section class="card"><div class="kicker">Event flow</div><div class="visual"><div class="stack"><div class="demo bub" id="bub"><div class="lvl" data-n="section">section<div class="lvl" data-n="article">article.card<div class="lvl" data-n="div">div.actions<button type="button" class="tgt" data-n="button">button (target)</button></div></div></div><div class="log" id="bubLog" style="min-height:70px"></div></div></div></div><h2>Capture, target, bubble</h2><p>An event travels in three phases: <b>capture</b> from <code>window</code> down to the target, the <b>target</b> itself, then <b>bubble</b> back up. Listeners run during bubbling by default. Tap the button:</p></section>
+<section class="card"><div class="kicker">Events · target vs currentTarget</div><div class="visual"><div class="stack"><div class="warn"><span><code>stopPropagation</code> and <code>preventDefault</code> are different things, and AI code often mixes them up. <code>stopPropagation</code> also breaks parents that legitimately listen (analytics, "click outside to close" menus), so ask why it's needed.</span></div></div></div><h2>Who was clicked vs who is listening</h2><div class="cb rise " style="--d:0s"><div class="cb-h">event object</div><pre>card.addEventListener(<span class="s">'click'</span>, (e) =&gt; {
+  e.target;          <span class="c">// the innermost element clicked (maybe the &lt;span&gt; inside the button)</span>
+  e.currentTarget;   <span class="c">// the element this listener is attached to: card</span>
+});
+e.stopPropagation(); <span class="c">// stop the bubble here (parents won't hear it)</span>
+e.preventDefault();  <span class="c">// cancel the browser default (link nav, form submit, checkbox toggle)</span></pre></div></section>
+<section class="card"><div class="kicker">Delegation</div><div class="visual"><div class="stack"><div class="demo run"><textarea spellcheck="false">const ul = document.createElement('ul');
+ul.innerHTML = '&lt;li data-id="1"&gt;&lt;span&gt;Tower&lt;/span&gt;&lt;/li&gt;&lt;li data-id="2"&gt;Bridge&lt;/li&gt;';
+ul.addEventListener('click', (e) =&gt; {
+  const li = e.target.closest('li[data-id]');   // works even if a child &lt;span&gt; was clicked
+  if (!li || !ul.contains(li)) return;
+  console.log('open project', li.dataset.id);
+});
+ul.querySelector('span').click();               // click lands on the span, bubbles to ul
+const li3 = document.createElement('li'); li3.dataset.id = '3'; ul.append(li3);
+li3.click();                                    // added later: still handled</textarea><div class="rowb"><button class="btn" type="button" data-run>▶ Run it</button><button class="btn ghost" type="button" data-reset>↺ reset</button></div><div class="log" aria-live="polite"></div></div></div></div><h2>One listener for many children</h2><p>Because events bubble, you can put <b>one</b> listener on a container and work out which child was hit with <code>e.target.closest()</code>. It works for items added later, too.</p><div class="analogy"><span>React does this for you: it attaches listeners at the root and dispatches to your <code>onClick</code> props.</span></div></section>
+<section class="card"><div class="kicker">Events · common types</div><div class="visual"><div class="stack"><div class="warn"><span>Listeners added in code must be removed when the UI goes away, or they leak memory and fire on dead UI. In React, that's the cleanup function returned from <code>useEffect</code>.</span></div></div></div><h2>The events you'll see most</h2><ol class="steps"><li><code>click</code>, <code>pointerdown/up</code>: mouse, touch and pen.</li><li><code>input</code> fires on every change; <code>change</code> on commit (blur, select).</li><li><code>keydown</code>: check <code>e.key === "Enter"</code>, not old <code>keyCode</code>.</li><li><code>submit</code> on the form, not the button's click.</li><li><code>focus/blur</code> don't bubble; <code>focusin/focusout</code> do.</li><li><code>scroll</code>, <code>resize</code>: fire very often; throttle them or use observers.</li></ol></section>
+<section class="card quiz" data-quiz><div class="kicker">Quiz 5 / 6 · bubbling</div><h2>A menu closes when you click outside it (a listener on <code>document</code>). A new button uses <code>e.stopPropagation()</code>. What breaks?</h2><div class="opts"><button class="opt" type="button" data-ok="0"><span class="l">A</span>Nothing</button><button class="opt" type="button" data-ok="1"><span class="l">B</span>Clicking that button no longer closes the open menu</button><button class="opt" type="button" data-ok="0"><span class="l">C</span>The button stops working</button></div><div class="fb" data-right="The document-level listener never hears clicks that were stopped lower in the tree." data-wrong="The menu stays open: &lt;code&gt;stopPropagation&lt;/code&gt; prevents the click from reaching the document listener."></div></section>
+<section class="card"><div class="kicker">Go deeper · events</div><h2>Want more on events?</h2><p>Optional. Each link is worth the time; start with the first.</p><ul class="links"><li class="rise" style="--d:0.0s"><a href="https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Event_bubbling" target="_blank" rel="noopener"><i>MDN</i><b>Event bubbling</b><span>Bubbling, capture, target vs currentTarget, and delegation.</span></a></li><li class="rise" style="--d:0.15s"><a href="https://javascript.info/bubbling-and-capturing" target="_blank" rel="noopener"><i>javascript.info</i><b>Bubbling and capturing</b><span>Clear diagrams of the three phases.</span></a></li><li class="rise" style="--d:0.3s"><a href="https://javascript.info/event-delegation" target="_blank" rel="noopener"><i>javascript.info</i><b>Event delegation</b><span>The pattern in depth, with exercises.</span></a></li></ul></section>
+<section class="card sect"><div class="visual"><div class="num pop">6</div></div><div class="kicker">Section 6 of 6</div><h1>Talking to the server: <span class="grad">fetch</span></h1><p>How the page gets data after it loads, and the error handling that AI code usually gets wrong.</p></section>
+<section class="card"><div class="kicker">fetch · basics</div><div class="visual"><div class="stack"><p><code>fetch</code> returns immediately with a Promise (see Part 2 for how promises and <code>await</code> work). The <b>response headers</b> arrive first; the <b>body</b> is a stream you read with <code>.json()</code>, <code>.text()</code> or <code>.blob()</code>.</p></div></div><h2>A request returns a Promise</h2><div class="cb rise " style="--d:0s"><div class="cb-h">fetch</div><pre><span class="k">const</span> res = <span class="k">await</span> fetch(<span class="s">'/api/projects?status=open'</span>, {
+  headers: { Accept: <span class="s">'application/json'</span> },
+});
+res.status;          <span class="c">// 200</span>
+res.ok;              <span class="c">// true for 200–299</span>
+<span class="k">const</span> data = <span class="k">await</span> res.json();   <span class="c">// body is read separately: another Promise</span>
 
-  <section class="card">
-    <div class="kicker">Layer 1 · HTML = structure &amp; meaning</div>
-    <div class="visual"><div class="sbs">
-      <div class="cb rise"><div class="cb-h">project-card.html</div><pre><span class="t">&lt;article</span> class=<span class="s">"card"</span><span class="t">&gt;</span>
-  <span class="t">&lt;span</span> class=<span class="s">"st"</span><span class="t">&gt;</span>Open<span class="t">&lt;/span&gt;</span>
-  <span class="t">&lt;h3&gt;</span>Riverside Tower<span class="t">&lt;/h3&gt;</span>
-  <span class="t">&lt;p&gt;</span>Concrete pour on Level 4<span class="t">&lt;/p&gt;</span>
-  <span class="t">&lt;button&gt;</span>Mark done<span class="t">&lt;/button&gt;</span>
-<span class="t">&lt;/article&gt;</span></pre></div>
-      <div class="down">↓ browser renders</div>
-      <div class="raw pop" style="--d:.5s"><span>Open</span><h3>Riverside Tower</h3><p>Concrete pour on Level 4</p><button tabindex="-1">Mark done</button></div>
-    </div></div>
-    <h2>HTML says <i>what things are</i></h2>
-    <p>Tags label content: this is an article, a heading, a button. With no styling, the browser uses ugly defaults, but the meaning and structure are already there.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Layer 2 · CSS = presentation</div>
-    <div class="visual"><div class="sbs">
-      <div class="cb rise"><div class="cb-h">styles.css</div><pre><span class="k">.card</span>   { background: white; border-radius: 14px;
-          padding: 12px 14px; box-shadow: …; }
-<span class="k">.st</span>     { color: #ff5c1a; border-radius: 999px; }
-<span class="k">button</span>  { background: #ff5c1a; color: white; }</pre></div>
-      <div class="down">↓ same HTML, now styled</div>
-      <div class="pc pop" style="--d:.5s"><span class="st">Open</span><h3>Riverside Tower</h3><p>Concrete pour on Level 4</p><button tabindex="-1">Mark done</button></div>
-    </div></div>
-    <h2>CSS says <i>how things look</i></h2>
-    <p>Same HTML, new look. CSS rules pick elements with <b>selectors</b> and set properties like color, spacing and shadows.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Layer 3 · JS = behavior</div>
-    <div class="visual"><div class="sbs demo">
-      <div class="cb rise"><div class="cb-h">card.js</div><pre><span class="k">const</span> btn = document.querySelector(<span class="s">'.card button'</span>);
-btn.<span class="y">addEventListener</span>(<span class="s">'click'</span>, () =&gt; {
-  card.classList.<span class="y">toggle</span>(<span class="s">'done'</span>);
-  status.textContent = <span class="s">'Done'</span>;
-});</pre></div>
-      <div class="down">↓ try it: tap the button</div>
-      <div class="pc" id="pcLive"><span class="st">Open</span><h3>Riverside Tower</h3><p>Concrete pour on Level 4</p><button type="button" id="pcBtn">Mark done</button></div>
-    </div></div>
-    <h2>JS says <i>what happens</i></h2>
-    <p>JS listens for events like clicks and <b>changes the page in response</b>. Here it flips a CSS class and updates the text.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">The big picture</div>
-    <div class="visual">
-      <svg viewBox="0 0 320 200" aria-hidden="true" font-family="system-ui" font-size="11" font-weight="700">
-        <g class="rise"><rect x="10" y="20" width="300" height="44" rx="12" fill="#2a1a14" stroke="#ff7a45"/><text x="24" y="47" fill="#ff7a45">HTML</text><text x="300" y="47" text-anchor="end" fill="#a3acc2" font-weight="400">≈ your data model / schema</text></g>
-        <g class="rise" style="--d:.3s"><rect x="10" y="78" width="300" height="44" rx="12" fill="#13243a" stroke="#4ea8ff"/><text x="24" y="105" fill="#4ea8ff">CSS</text><text x="300" y="105" text-anchor="end" fill="#a3acc2" font-weight="400">≈ view templates / formatting</text></g>
-        <g class="rise" style="--d:.6s"><rect x="10" y="136" width="300" height="44" rx="12" fill="#2a2510" stroke="#f7d046"/><text x="24" y="163" fill="#f7d046">JS</text><text x="300" y="163" text-anchor="end" fill="#a3acc2" font-weight="400">≈ controllers / event handlers</text></g>
-      </svg>
-    </div>
-    <h2>Separation of concerns, browser edition</h2>
-    <p>Keep each layer in its lane. When AI-generated code puts styling in JS strings or logic in markup, that's worth questioning in review.</p>
-  </section>
-
-  <section class="card quiz" data-quiz>
-    <div class="kicker">Quiz · Section 1</div>
-    <h2>You want the "Open" badge to be green instead of orange. Which layer do you change?</h2>
-    <div class="qspacer"></div>
-    <div class="opts">
-      <button class="opt" type="button" data-ok="0"><span class="l">A</span>HTML: change the &lt;span&gt;</button>
-      <button class="opt" type="button" data-ok="1"><span class="l">B</span>CSS: change the <code>.st</code> rule</button>
-      <button class="opt" type="button" data-ok="0"><span class="l">C</span>JS: set the color on page load</button>
-    </div>
-    <div class="fb" data-right="Looks belong in CSS. The HTML structure doesn't change, and doing it in JS would be slower and harder to maintain." data-wrong="It's <b>B</b>. Color is presentation, so it belongs in CSS. The HTML structure stays the same, and JS is for behavior."></div>
-    <div class="qspacer"></div>
-  </section>
-
-  <!-- S2 -->
-  <section class="card sect">
-    <div class="visual"><div class="num pop">2</div></div>
-    <div class="kicker">Section 2 of 5</div>
-    <h1>The DOM: the page as <span class="grad">objects</span></h1>
-    <p>The browser doesn't keep your HTML as text. It builds a <b>tree of objects</b> that JS can query and change live.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">HTML text → object tree</div>
-    <div class="visual"><div class="sbs">
-      <div class="cb rise"><pre><span class="t">&lt;article</span> class=<span class="s">"card"</span><span class="t">&gt;</span>
-  <span class="t">&lt;h3&gt;</span>Riverside Tower<span class="t">&lt;/h3&gt;</span>
-  <span class="t">&lt;button&gt;</span>Mark done<span class="t">&lt;/button&gt;</span>
-<span class="t">&lt;/article&gt;</span></pre></div>
-      <div class="down fade" style="--d:.4s">↓ parse</div>
-      <div class="tree rise" style="--d:.6s">article.card            <span class="c">← Element object</span>
- ├─ h3
- │   └─ "Riverside Tower"     <span class="c">← Text node</span>
- └─ button
-     └─ "Mark done"</div>
-    </div></div>
-    <h2>Every tag becomes a node object</h2>
-    <p>Each node has properties (<code>className</code>, <code>textContent</code>), a parent and children. The DOM is this tree plus the API for working with it.</p>
-    <div class="analogy"><span>Like JSON parsed into a <b>Hash/Map of objects</b>, or an ORM's object graph: you work with objects, not raw text.</span></div>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Reading · querySelector</div>
-    <div class="visual"><div class="sbs">
-      <div class="cb rise"><pre><span class="k">const</span> title = document.<span class="y">querySelector</span>(<span class="s">'.card h3'</span>);
-title.textContent   <span class="c">// "Riverside Tower"</span>
-document.<span class="y">querySelectorAll</span>(<span class="s">'button'</span>).length  <span class="c">// 1</span></pre></div>
-      <div class="tree rise" style="--d:.4s">article.card
- ├─ <span class="sel pulse">h3</span>   <span class="c">← matched by '.card h3'</span>
- │   └─ "Riverside Tower"
- └─ button</div>
-    </div></div>
-    <h2>Find nodes with CSS selectors</h2>
-    <p><code>querySelector</code> returns the first match and <code>querySelectorAll</code> returns all of them. They use the <b>same selector syntax as CSS</b>.</p>
-    <div class="analogy"><span>Think <code>Project.where(...)</code> or <code>.find_by</code>, but over the DOM tree.</span></div>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Changing · textContent &amp; classList</div>
-    <div class="visual"><div class="sbs demo">
-      <div class="cb rise"><pre>title.textContent = <span class="s">'Riverside Tower ✓'</span>;
-card.classList.<span class="y">add</span>(<span class="s">'done'</span>);</pre></div>
-      <div class="tg"><button type="button" id="tcBtn">▶ run these 2 lines</button></div>
-      <div class="tree" id="tcTree">article.card
- ├─ h3
- │   └─ "Riverside Tower"
- └─ button</div>
-    </div></div>
-    <h2>Change a node and the screen updates</h2>
-    <p>Set a property and the browser re-renders that part of the page. No reload and no server round trip.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Building · createElement + appendChild</div>
-    <div class="visual"><div class="sbs demo">
-      <div class="cb"><pre><span class="k">const</span> li = document.<span class="y">createElement</span>(<span class="s">'li'</span>);
-li.textContent = <span class="s">'RFI #'</span> + n;
-list.<span class="y">appendChild</span>(li);</pre></div>
-      <div class="tg"><button type="button" id="acBtn">+ appendChild</button><button type="button" id="acReset">reset</button></div>
-      <div class="row2" style="align-items:stretch"><div class="tree" id="acTree" style="flex:1;font-size:11px"></div><div class="mini" style="flex:1"><b style="font-size:11px">RFIs</b><ul id="acUl" style="padding-left:16px;margin:4px 0"></ul></div></div>
-    </div></div>
-    <h2>Create nodes, then attach them</h2>
-    <p>New elements exist only in memory until you <b>append them into the tree</b>, and then they appear on screen. Tap the button to watch both sides change.</p>
-  </section>
-
-  <section class="card quiz" data-quiz>
-    <div class="kicker">Quiz · Section 2</div>
-    <h2>What does this do?</h2>
-    <div class="qcode"><span class="k">const</span> p = document.createElement(<span class="s">'p'</span>);
-p.textContent = <span class="s">'Hello'</span>;</div>
-    <div class="opts">
-      <button class="opt" type="button" data-ok="0"><span class="l">A</span>Shows "Hello" at the bottom of the page</button>
-      <button class="opt" type="button" data-ok="1"><span class="l">B</span>Nothing visible yet: it's not in the tree</button>
-      <button class="opt" type="button" data-ok="0"><span class="l">C</span>Throws an error</button>
-    </div>
-    <div class="fb" data-right="The element exists in memory but isn't attached. It appears only after something like <code>document.body.appendChild(p)</code>." data-wrong="It's <b>B</b>. <code>createElement</code> makes a detached node. Nothing shows until you <code>appendChild</code> it somewhere in the tree."></div>
-  </section>
-
-  <!-- S3 -->
-  <section class="card sect">
-    <div class="visual"><div class="num pop">3</div></div>
-    <div class="kicker">Section 3 of 5</div>
-    <h1>CSS <span class="grad">essentials</span></h1>
-    <p>Five ideas cover most of what you'll see in real code: selectors, the cascade, the box model, Flexbox and Grid.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Selectors · who gets styled</div>
-    <div class="visual"><div class="demo">
-      <div class="tg" id="selTg"><button type="button" data-sel="h3" class="on">h3</button><button type="button" data-sel=".st">.st</button><button type="button" data-sel="#featured">#featured</button><button type="button" data-sel=".card p">.card p</button><button type="button" data-sel="button:hover">button:hover</button></div>
-      <div class="pc" id="selCard"><span class="st">Open</span><h3 id="featured">Riverside Tower</h3><p>Concrete pour on Level 4</p><button tabindex="-1" type="button">Mark done</button></div>
-      <div class="find" id="selNote">tag selector: every &lt;h3&gt;</div>
-    </div></div>
-    <h2>Selectors are queries</h2>
-    <p>Tag (<code>h3</code>), class (<code>.st</code>), id (<code>#featured</code>), descendant (<code>.card p</code>) and state (<code>:hover</code>). Tap one to highlight what it matches.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Cascade &amp; specificity</div>
-    <div class="visual"><div class="sbs">
-      <div class="cb rise"><pre><span class="k">h3</span>        { color: green; }  <span class="c">/* 0,0,1 */</span>
-<span class="k">.title</span>    { color: blue;  }  <span class="c">/* 0,1,0 */</span>
-<span class="k">#featured</span> { color: red;   }  <span class="c">/* 1,0,0 ← wins */</span></pre></div>
-      <svg viewBox="0 0 320 70" class="rise" style="--d:.4s;max-height:90px" font-family="system-ui" font-size="10" font-weight="700">
-        <rect x="10" y="10" width="90" height="40" rx="8" fill="#0f2a20" stroke="#3ddc97"/><text x="55" y="34" text-anchor="middle" fill="#3ddc97">tag</text>
-        <text x="110" y="34" fill="#5d6680">&lt;</text>
-        <rect x="120" y="10" width="90" height="40" rx="8" fill="#13243a" stroke="#4ea8ff"/><text x="165" y="34" text-anchor="middle" fill="#4ea8ff">class</text>
-        <text x="220" y="34" fill="#5d6680">&lt;</text>
-        <rect x="230" y="10" width="80" height="40" rx="8" fill="#3a1624" stroke="#ff5c8a"/><text x="270" y="34" text-anchor="middle" fill="#ff5c8a">id</text>
-      </svg>
-    </div></div>
-    <h2>When rules conflict, the more specific one wins</h2>
-    <p>Specificity is compared like a version number (id, class, tag), and <b>source order only breaks ties</b>. Inline styles and <code>!important</code> override both.</p>
-    <div class="analogy"><span>Config precedence: framework defaults &lt; <code>config/*.yml</code> &lt; ENV vars &lt; CLI flags.</span></div>
-  </section>
-
-  <section class="card">
-    <div class="kicker">The box model · interactive</div>
-    <div class="visual"><div class="demo">
-      <div class="bm" id="bm"><div class="bm-m"><div class="bm-b"><div class="bm-p"><div class="bm-c">content</div></div></div></div></div>
-      <div class="tg" id="bmTg"><button type="button" data-v="--m" data-a="4px,16px,30px">margin</button><button type="button" data-v="--b" data-a="1px,4px,10px">border</button><button type="button" data-v="--p" data-a="2px,14px,28px">padding</button></div>
-      <div class="find"><span class="hl-html">margin</span> outside · <span class="hl-js">border</span> · <span class="hl-g">padding</span> inside · <span class="hl-css">content</span></div>
-    </div></div>
-    <h2>Every element is a box</h2>
-    <p>Content, then padding, then border, then margin. Tap to cycle each one. Use <code>box-sizing: border-box</code> so <code>width</code> includes padding and border; almost every codebase sets it globally.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Flexbox · one direction</div>
-    <div class="visual"><div class="demo">
-      <div class="flexbox" id="fx"><div>A</div><div>B</div><div>C</div></div>
-      <div class="tg" id="fxTg">
-        <button type="button" data-p="flexDirection" data-a="row,column">direction</button>
-        <button type="button" data-p="justifyContent" data-a="flex-start,center,space-between,flex-end">justify</button>
-        <button type="button" data-p="alignItems" data-a="stretch,center,flex-start,flex-end">align</button>
-      </div>
-      <div class="find mono" id="fxNote">display:flex; flex-direction:row</div>
-    </div></div>
-    <h2>Flexbox lays things out in a row or a column</h2>
-    <p><code>justify-content</code> works along the main axis and <code>align-items</code> along the cross axis. It's the default choice for toolbars, nav bars and card rows.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Grid · two directions</div>
-    <div class="visual"><div class="demo">
-      <div class="gridbox" id="gd"><div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div></div>
-      <div class="tg" id="gdTg">
-        <button type="button" data-c="repeat(3,1fr)" class="on">3 equal</button>
-        <button type="button" data-c="2fr 1fr">2fr 1fr</button>
-        <button type="button" data-c="80px 1fr 1fr">80px 1fr 1fr</button>
-        <button type="button" data-c="repeat(auto-fill,minmax(60px,1fr))">auto-fill</button>
-      </div>
-      <div class="find mono" id="gdNote">grid-template-columns: repeat(3,1fr)</div>
-    </div></div>
-    <h2>Grid lays things out in rows <i>and</i> columns</h2>
-    <p>You define the tracks and items flow into them. Use it for page layouts and dashboards. A rough rule: <b>Flex for a line of things, Grid for a 2D layout</b>.</p>
-  </section>
-
-  <section class="card quiz" data-quiz>
-    <div class="kicker">Quiz · Section 3</div>
-    <h2>A toolbar should have its buttons spread out with equal space between them. What do you reach for?</h2>
-    <div class="qspacer"></div>
-    <div class="opts">
-      <button class="opt" type="button" data-ok="1"><span class="l">A</span><code>display:flex; justify-content:space-between</code></button>
-      <button class="opt" type="button" data-ok="0"><span class="l">B</span><code>margin-left: 37px</code> on each button</button>
-      <button class="opt" type="button" data-ok="0"><span class="l">C</span>A <code>&lt;table&gt;</code></button>
-    </div>
-    <div class="fb" data-right="A single row of items is Flexbox's home turf, and space-between spreads them out at any width." data-wrong="It's <b>A</b>. Hard-coded margins break when widths change, and tables are for tabular data. A row of items is a Flexbox job."></div>
-    <div class="qspacer"></div>
-  </section>
-
-  <!-- S4 -->
-  <section class="card sect">
-    <div class="visual"><div class="num pop">4</div></div>
-    <div class="kicker">Section 4 of 5</div>
-    <h1>JS in the <span class="grad">browser</span></h1>
-    <p>Events, network calls, JSON and the event loop: the runtime model that everything else, including React, is built on.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Events · the browser calls you</div>
-    <div class="visual"><div class="demo">
-      <div class="cb"><pre>btn.<span class="y">addEventListener</span>(<span class="s">'click'</span>, (event) =&gt; {
-  log(<span class="s">'clicked '</span> + event.target.textContent);
-});</pre></div>
-      <div class="tg"><button type="button" class="evb">Save</button><button type="button" class="evb">Approve</button><button type="button" class="evb">Reject</button></div>
-      <div class="log" id="evLog"><div style="color:var(--dim)">// tap a button…</div></div>
-    </div></div>
-    <h2>Register handlers, then react</h2>
-    <p>You don't poll for clicks. You register a callback and the browser calls it with an <b>event object</b>. Clicks, typing, scrolling and form submits are all events.</p>
-    <div class="analogy"><span>Like registering a <b>route → controller action</b>, or subscribing to a message queue topic.</span></div>
-  </section>
-
-  <section class="card">
-    <div class="kicker">fetch · HTTP from the browser</div>
-    <div class="visual"><div class="sbs">
-      <div class="cb rise"><pre><span class="k">const</span> res = <span class="k">await</span> <span class="y">fetch</span>(<span class="s">'/rest/v1.0/projects'</span>); <span class="c">// example</span>
-<span class="k">if</span> (!res.ok) <span class="k">throw new</span> Error(res.status);
-<span class="k">const</span> projects = <span class="k">await</span> res.<span class="y">json</span>();</pre></div>
-      <svg viewBox="0 0 320 70" class="rise" style="--d:.3s;max-height:90px" font-family="ui-monospace,Menlo,monospace" font-size="9" font-weight="700">
-        <rect x="6" y="14" width="80" height="40" rx="10" fill="#121622" stroke="#2a3145"/><text x="46" y="38" text-anchor="middle" fill="#cdd5ea">browser</text>
-        <rect x="234" y="14" width="80" height="40" rx="10" fill="#121622" stroke="#2a3145"/><text x="274" y="38" text-anchor="middle" fill="#cdd5ea">Rails API</text>
-        <path d="M90 26 H230" stroke="#4ea8ff" stroke-width="2" class="flow"/><text x="160" y="20" text-anchor="middle" fill="#4ea8ff">GET …/projects</text>
-        <path d="M230 44 H90" stroke="#3ddc97" stroke-width="2" class="flow"/><text x="160" y="62" text-anchor="middle" fill="#3ddc97">200 · JSON</text>
-      </svg>
-    </div></div>
-    <h2><code>fetch</code> is your HTTP client</h2>
-    <p>It returns a <b>Promise</b>, a value that arrives later, and <code>await</code> pauses this function without blocking the page. Note that it only rejects on network failure, so <b>check <code>res.ok</code></b> for 4xx/5xx responses.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">JSON · the shape of data</div>
-    <div class="visual"><div class="sbs">
-      <div class="cb rise"><div class="cb-h">response body (text)</div><pre>[{<span class="s">"id"</span>:<span class="y">42</span>,<span class="s">"name"</span>:<span class="s">"Riverside Tower"</span>,<span class="s">"open_rfis"</span>:<span class="y">7</span>}]</pre></div>
-      <div class="down fade" style="--d:.4s">↓ res.json()  ≈  JSON.parse</div>
-      <div class="cb rise" style="--d:.6s"><div class="cb-h">JS objects</div><pre>projects[<span class="y">0</span>].name       <span class="c">// "Riverside Tower"</span>
-projects.<span class="y">map</span>(p =&gt; p.id)  <span class="c">// [42]</span></pre></div>
-    </div></div>
-    <h2>Text on the wire, objects in memory</h2>
-    <p>Your Rails <code>render json:</code> becomes JS arrays and objects in the browser. JSON has no dates or classes, only strings, numbers, booleans, null, arrays and objects.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">The event loop · one thread</div>
-    <div class="visual"><div class="demo">
-      <div class="cb"><pre>log(<span class="s">'1 start'</span>);
-setTimeout(() =&gt; log(<span class="s">'4 timeout'</span>), <span class="y">0</span>);
-Promise.resolve().then(() =&gt; log(<span class="s">'3 promise'</span>));
-log(<span class="s">'2 end'</span>);</pre></div>
-      <div class="tg"><button type="button" id="elBtn">▶ run</button></div>
-      <div class="log" id="elLog"><div style="color:var(--dim)">// guess the order, then run…</div></div>
-    </div></div>
-    <h2>Run to completion, then the queues</h2>
-    <p>Synchronous code runs first. Then the loop drains <b>microtasks</b> (promise callbacks), then takes the next <b>task</b> (timers, clicks, network). A long task blocks everything, including clicks.</p>
-    <div class="analogy"><span>Not a Puma thread pool: picture <b>one worker</b> taking jobs from a queue, one at a time.</span></div>
-  </section>
-
-  <section class="card quiz" data-quiz>
-    <div class="kicker">Quiz · Section 4</div>
-    <h2><code>fetch</code> returns HTTP 500. What happens?</h2>
-    <div class="qcode"><span class="k">const</span> res = <span class="k">await</span> fetch(url);
-<span class="k">const</span> data = <span class="k">await</span> res.json();</div>
-    <div class="opts">
-      <button class="opt" type="button" data-ok="0"><span class="l">A</span>fetch throws, so we land in the catch block</button>
-      <button class="opt" type="button" data-ok="1"><span class="l">B</span>fetch resolves normally, and we must check <code>res.ok</code></button>
-      <button class="opt" type="button" data-ok="0"><span class="l">C</span>The browser retries automatically</button>
-    </div>
-    <div class="fb" data-right="fetch only rejects on network failure. HTTP errors are a successful response with <code>ok === false</code>, a classic bug to look for in AI-written code." data-wrong="It's <b>B</b>. fetch only rejects on network errors, so a 500 still resolves. Without a <code>res.ok</code> check, the code happily parses the error body."></div>
-  </section>
-
-  <!-- S5 -->
-  <section class="card sect">
-    <div class="visual"><div class="num pop">5</div></div>
-    <div class="kicker">Section 5 of 5 · Mini-lab</div>
-    <h1>Build it <span class="grad">by hand</span></h1>
-    <p>A projects list in plain JS: fetch JSON, then build DOM nodes. It's everything so far in about 15 lines, and it shows why React exists.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">The code</div>
-    <div class="visual"><div class="cb rise" style="width:100%"><div class="cb-h">projects.js (vanilla)</div><pre><span class="k">async function</span> <span class="y">loadProjects</span>() {
-  <span class="k">const</span> res = <span class="k">await</span> fetch(<span class="s">'/rest/v1.0/projects'</span>);
-  <span class="k">if</span> (!res.ok) <span class="k">throw new</span> Error(res.status);
-  <span class="k">const</span> projects = <span class="k">await</span> res.json();
-
-  <span class="k">const</span> ul = document.querySelector(<span class="s">'#projects'</span>);
-  ul.textContent = <span class="s">''</span>;              <span class="c">// clear old list</span>
-  <span class="k">for</span> (<span class="k">const</span> p <span class="k">of</span> projects) {
-    <span class="k">const</span> li = document.createElement(<span class="s">'li'</span>);
-    li.textContent = p.name + <span class="s">' · '</span> + p.open_rfis + <span class="s">' RFIs'</span>;
-    li.addEventListener(<span class="s">'click'</span>, () =&gt; li.classList.toggle(<span class="s">'done'</span>));
-    ul.appendChild(li);
+<span class="k">await</span> fetch(<span class="s">'/api/projects'</span>, {
+  method: <span class="s">'POST'</span>,
+  headers: { <span class="s">'Content-Type'</span>: <span class="s">'application/json'</span> },
+  body: JSON.stringify({ name: <span class="s">'Tower'</span> }),    <span class="c">// you stringify yourself</span>
+});</pre></div></section>
+<section class="card"><div class="kicker">fetch · the big gotcha</div><div class="visual"><div class="stack"><div class="cb rise bad" style="--d:0s"><div class="cb-h">✗ What AI often writes</div><pre><span class="k">try</span> {
+  <span class="k">const</span> res = <span class="k">await</span> fetch(url);
+  <span class="k">const</span> data = <span class="k">await</span> res.json();   <span class="c">// 500 → parses the error body as "data"</span>
+  setProjects(data);               <span class="c">// or throws a confusing JSON SyntaxError on an HTML error page</span>
+} <span class="k">catch</span> { setError(<span class="s">'Network error'</span>); }</pre></div><div class="cb rise good" style="--d:0.2s"><div class="cb-h">✓ What good looks like</div><pre><span class="k">const</span> res = <span class="k">await</span> fetch(url);
+<span class="k">if</span> (!res.ok) <span class="k">throw</span> <span class="k">new</span> HttpError(res.status, <span class="k">await</span> res.text());
+<span class="k">const</span> data: <span class="k">unknown</span> = <span class="k">await</span> res.json();
+setProjects(ProjectList.parse(data));   <span class="c">// validate the shape (Part 2)</span></pre></div></div></div><h2>A 404 or 500 does <b>not</b> reject</h2><p><code>fetch</code> only rejects on <b>network failure</b> (offline, DNS, CORS blocked). An HTTP error status is a successful fetch of an error response. You must check <code>res.ok</code>.</p></section>
+<section class="card"><div class="kicker">fetch · try it</div><h2>Handle every outcome</h2><div class="demo run"><textarea spellcheck="false">// a stand-in server so this runs offline
+const fakeFetch = async (url) =&gt; {
+  await new Promise(r =&gt; setTimeout(r, 150));
+  if (url === '/offline') throw new TypeError('Failed to fetch');
+  const status = url === '/missing' ? 404 : 200;
+  return { ok: status &lt; 300, status, json: async () =&gt; status === 200 ? [{ id: 1, name: 'Tower' }] : { error: 'not found' } };
+};
+async function load(url) {
+  try {
+    const res = await fakeFetch(url);
+    if (!res.ok) return console.log(url, '→ HTTP error', res.status);
+    console.log(url, '→ data', await res.json());
+  } catch (e) {
+    console.log(url, '→ network failure:', e.message);
   }
 }
-loadProjects();</pre></div></div>
-    <h2>fetch → JSON → loop → createElement</h2>
-    <p>Every part is something you've seen. Using <code>textContent</code> rather than <code>innerHTML</code> also <b>prevents XSS</b>: data is never parsed as HTML.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Try it · edit &amp; run</div>
-    <div class="visual"><div class="demo lab">
-      <textarea id="labSrc" spellcheck="false"></textarea>
-      <div class="tg"><button type="button" id="labRun">▶ Run</button><button type="button" id="labReset">reset</button></div>
-      <iframe id="labOut" sandbox="allow-scripts" title="live preview"></iframe>
-    </div></div>
-    <p style="font-size:13px">A fake <code>fetch</code> returns sample JSON, so it runs offline. Try adding a project or changing the markup, then tap Run.</p>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Where this gets painful</div>
-    <div class="visual"><div class="sbs">
-      <div class="cb rise"><pre><span class="c">// a new RFI arrives… now update by hand:</span>
-li.textContent = <span class="s">'Riverside · 8 RFIs'</span>;   <span class="c">// the list</span>
-badge.textContent = total;               <span class="c">// the header badge</span>
-sidebarCount.textContent = total;        <span class="c">// the sidebar</span>
-<span class="k">if</span> (total === <span class="y">0</span>) emptyState.hidden = <span class="k">false</span>; <span class="c">// …</span>
-<span class="c">// forgot one? → UI out of sync 🐛</span></pre></div>
-      <svg viewBox="0 0 320 80" class="rise" style="--d:.5s;max-height:100px" font-family="system-ui" font-size="10" font-weight="700">
-        <rect x="120" y="26" width="80" height="28" rx="8" fill="#0f2a20" stroke="#3ddc97"/><text x="160" y="44" text-anchor="middle" fill="#3ddc97">data</text>
-        <g stroke="#ff5c8a" stroke-width="1.5" fill="none" class="flow"><path d="M120 34 C80 10 60 10 40 14"/><path d="M120 46 C80 70 60 70 40 66"/><path d="M200 34 C240 10 260 10 280 14"/><path d="M200 46 C240 70 260 70 280 66"/></g>
-        <text x="20" y="18" fill="#ff7a45">list</text><text x="10" y="70" fill="#ff7a45">badge</text><text x="282" y="18" fill="#ff7a45">sidebar</text><text x="282" y="70" fill="#ff7a45">empty</text>
-      </svg>
-    </div></div>
-    <h2>Every change, every place, by hand</h2>
-    <p>With manual DOM code, you track every spot that shows a piece of data. It gets <b>buggy fast as the app grows</b>. React's answer: describe the UI as a function of the data, and let it do the updates.</p>
-    <div class="analogy"><span>Like hand-written SQL migrations for every change vs. declaring the schema and letting a tool compute the diff.</span></div>
-  </section>
-
-  <section class="card">
-    <div class="kicker">Recap</div>
-    <h2>How a web page works</h2>
-    <ul class="take">
-      <li class="rise" style="--d:.1s"><b>HTML</b> = structure, <b>CSS</b> = looks, <b>JS</b> = behavior.</li>
-      <li class="rise" style="--d:.3s"><b>DOM</b> = a live object tree; <code>querySelector</code>, <code>textContent</code> and <code>appendChild</code> read and change it.</li>
-      <li class="rise" style="--d:.5s"><b>CSS:</b> selectors pick elements, specificity settles conflicts, every element is a box, Flex for a line, Grid for 2D.</li>
-      <li class="rise" style="--d:.7s"><b>JS:</b> events call your handlers, <code>fetch</code> returns Promises (check <code>res.ok</code>), and one thread runs everything.</li>
-      <li class="rise" style="--d:.9s"><b>Manual DOM updates don't scale</b>, and that's the problem React solves. Next: React, the "why" and the "how".</li>
-    </ul>
-    <div class="score" id="score"></div>
-    <button class="btn ghost" id="restart" type="button" style="margin-top:10px">↺ Restart</button>
-  </section>
-
+await load('/projects'); await load('/missing'); await load('/offline');</textarea><div class="rowb"><button class="btn" type="button" data-run>▶ Run it</button><button class="btn ghost" type="button" data-reset>↺ reset</button></div><div class="log" aria-live="polite"></div></div></section>
+<section class="card"><div class="kicker">fetch · in the real world</div><div class="visual"><div class="stack"><div class="cb rise good" style="--d:0.2s"><div class="cb-h">✓ timeout + cancel</div><pre><span class="k">const</span> ctrl = <span class="k">new</span> AbortController();
+<span class="k">const</span> t = setTimeout(() =&gt; ctrl.abort(), 10_000);       <span class="c">// timeout: fetch has none by default</span>
+<span class="k">try</span> { <span class="k">const</span> res = <span class="k">await</span> fetch(url, { signal: ctrl.signal }); … }
+<span class="k">finally</span> { clearTimeout(t); }</pre></div></div></div><h2>States, cancellation, credentials, CORS</h2><ol class="steps"><li>Model <b>loading / error / success</b> explicitly; render each one.</li><li>Cancel stale requests with <code>AbortController</code> (search boxes, fast navigation), or results arrive out of order.</li><li>Cookies are sent to the <b>same origin</b> by default; cross-origin needs <code>credentials: "include"</code> and server CORS headers.</li><li><b>CORS</b> errors are enforced by the browser. The fix is on the <b>server</b> (response headers), not in fetch options.</li></ol><p>Real apps usually wrap this in a data library (e.g. TanStack Query) that handles caching, retries, deduplication and cancellation.</p></section>
+<section class="card"><div class="kicker">Bringing it together</div><div class="visual"><div class="stack"><div class="flowchips rise"><span class="chip" style="background:#3ddc97">state / data</span><span class="arr">→ render() →</span><span class="chip" style="background:#a78bfa">virtual tree</span><span class="arr">→ diff →</span><span class="chip" style="background:#ff7a45">minimal DOM updates</span></div></div></div><h2>Why frameworks exist</h2><p>With plain DOM code, each data change means finding every element that shows it and updating it by hand: the list, the badge, the counter, the empty state. Forget one and the UI drifts out of sync.</p><p>React flips this: you write a function from <b>data → UI</b>, and it works out the DOM changes. Everything in this part still applies underneath: semantic elements, CSS layout, bubbling events and fetch.</p></section>
+<section class="card quiz" data-quiz><div class="kicker">Quiz 6 / 6 · fetch</div><h2>The server responds <code>500</code>. What does this code do?</h2><div class="qcode"><span class="k">try</span> {
+  <span class="k">const</span> res = <span class="k">await</span> fetch(<span class="s">'/api/x'</span>);
+  show(<span class="k">await</span> res.json());
+} <span class="k">catch</span> {
+  showError();
+}</div><div class="opts"><button class="opt" type="button" data-ok="0"><span class="l">A</span>Calls showError()</button><button class="opt" type="button" data-ok="1"><span class="l">B</span>Calls show() with the error body, or throws on non-JSON</button><button class="opt" type="button" data-ok="0"><span class="l">C</span>fetch retries automatically</button></div><div class="fb" data-right="fetch resolves on any HTTP response; only &lt;code&gt;res.ok&lt;/code&gt; tells you it was a 500." data-wrong="It does &lt;b&gt;not&lt;/b&gt; reach the catch for a 500. The response is &quot;successful&quot;; the code tries to show the error JSON, or throws a SyntaxError if the body is HTML."></div></section>
+<section class="card"><div class="kicker">Go deeper · fetch</div><h2>Want more on fetch?</h2><p>Optional. Each link is worth the time; start with the first.</p><ul class="links"><li class="rise" style="--d:0.0s"><a href="https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch" target="_blank" rel="noopener"><i>MDN</i><b>Using the Fetch API</b><span>Requests, bodies, headers, errors, cancellation and streaming.</span></a></li><li class="rise" style="--d:0.15s"><a href="https://www.youtube.com/watch?v=cCOL7MC4Pl0" target="_blank" rel="noopener"><i>Video · JSConf</i><b>In The Loop (Jake Archibald)</b><span>How the browser schedules your handlers, network callbacks and rendering.</span></a></li></ul></section>
+<section class="card"><div class="kicker">Recap</div><h2>How a web page works</h2><ul class="take"><li class="rise" style="--d:0.0s"><b>HTML</b> = structure and meaning: semantic elements, real buttons and links, labelled inputs.</li><li class="rise" style="--d:0.12s"><b>DOM</b> = the live object tree; <code>querySelector</code> can return null; <code>textContent</code> over <code>innerHTML</code>.</li><li class="rise" style="--d:0.24s"><b>Cascade</b>: importance → layers → specificity → order. Every element is a box; use <code>border-box</code>.</li><li class="rise" style="--d:0.36s"><b>Flex</b> for a line (remember <code>min-width: 0</code>), <b>Grid</b> for rows and columns, <code>gap</code> for spacing.</li><li class="rise" style="--d:0.48s"><b>Events</b> capture down and bubble up; delegate with <code>closest()</code>; be wary of <code>stopPropagation</code>.</li><li class="rise" style="--d:0.6s"><b>fetch</b> rejects only on network failure: check <code>res.ok</code>, handle all states, cancel stale requests.</li></ul><div class="score" id="score"></div><p style="font-size:13px;margin-top:8px">Next: <b>Part 2</b>, the JS &amp; TypeScript crash course. <a href="index.html" style="color:var(--css)">← Course home</a></p><button class="btn ghost" id="restart" type="button" style="margin-top:10px">↺ Restart</button></section>
   <div class="bottom">
     <button class="nav" id="prev" type="button" aria-label="Previous card">‹</button>
     <span class="hint">tap · swipe · ← →</span>
@@ -691,6 +542,7 @@ sidebarCount.textContent = total;        <span class="c">// the sidebar</span>
   prevBtn.addEventListener('click',function(e){e.stopPropagation();prev();});
   nextBtn.addEventListener('click',function(e){e.stopPropagation();next();});
   $('restart').addEventListener('click',function(e){e.stopPropagation();go(0);});
+  
   var lastSwipe=0;
   stage.addEventListener('click',function(e){
     if(Date.now()-lastSwipe<450) return;
@@ -723,43 +575,48 @@ sidebarCount.textContent = total;        <span class="c">// the sidebar</span>
   });
   function updateScore(){ var s=$('score'); s.textContent=answered?('Quiz score: '+correct+' / '+NQ+(answered<NQ?' ('+(NQ-answered)+' skipped)':'')):''; }
 
-  // S1: live card
-  $('pcBtn').addEventListener('click',function(){ var c=$('pcLive'), d=c.classList.toggle('done'); c.querySelector('.st').textContent=d?'Done':'Open'; this.textContent=d?'Undo':'Mark done'; });
-  // S2: textContent/classList
-  var tcBase=$('tcTree').innerHTML, tcOn=false;
-  $('tcBtn').addEventListener('click',function(){ tcOn=!tcOn;
-    $('tcTree').innerHTML = tcOn ? 'article.card<span class="new">.done</span>\n ├─ h3\n │   └─ <span class="new">"Riverside Tower ✓"</span>\n └─ button' : tcBase;
-    this.textContent = tcOn ? '↺ undo' : '▶ run these 2 lines'; });
-  // S2: appendChild
-  var n=0;
-  function acRender(flash){ var t='ul#rfis'; var lis=$('acUl').children; for(var i=0;i<lis.length;i++){ t+='\n '+(i===lis.length-1?'└─ ':'├─ ')+(flash&&i===lis.length-1?'<span class="new">li "'+lis[i].textContent+'"</span>':'li "'+lis[i].textContent+'"'); } if(!lis.length) t+='\n  (empty)'; $('acTree').innerHTML=t; }
-  $('acBtn').addEventListener('click',function(){ if(n>=5) return; n++; var li=document.createElement('li'); li.textContent='RFI #'+(40+n); $('acUl').appendChild(li); acRender(true); });
-  $('acReset').addEventListener('click',function(){ n=0; $('acUl').textContent=''; acRender(false); });
-  acRender(false);
-  // S3: selectors
-  var notes={'h3':'tag selector: every <h3>','.st':'class selector: class="st"','#featured':'id selector: the one id="featured"','.card p':'descendant: <p> inside .card','button:hover':'pseudo-class: the button while hovered'};
-  function selShow(sel){ var card=$('selCard'); [].forEach.call(card.querySelectorAll('*'),function(el){ el.style.outline=''; el.style.outlineOffset=''; });
-    var q=sel==='button:hover'?'button':sel.replace('.card ',''); [].forEach.call(card.querySelectorAll(q),function(el){ el.style.outline='3px solid #f7d046'; el.style.outlineOffset='2px'; });
-    $('selNote').textContent=notes[sel]; }
-  [].forEach.call(document.querySelectorAll('#selTg button'),function(b){ b.addEventListener('click',function(){ [].forEach.call(this.parentNode.children,function(x){x.classList.remove('on');}); this.classList.add('on'); selShow(this.getAttribute('data-sel')); }); });
-  selShow('h3');
-  // cycling toggles helper
-  function cycler(sel, apply){ [].forEach.call(document.querySelectorAll(sel),function(b){ var vals=b.getAttribute('data-a').split(','), i=0; b.addEventListener('click',function(){ i=(i+1)%vals.length; apply(b,vals[i]); b.classList.add('on'); }); }); }
+  // ---- shared demos: code runners and steppers ----
+  var COLC={stack:'#f7d046',api:'#4ea8ff',micro:'#a78bfa',task:'#ff7a45',out:'#3ddc97',scope:'#4ee6e0',heap:'#3ddc97'};
+  [].forEach.call(document.querySelectorAll('.run'),function(r){
+    var ta=r.querySelector('textarea'), log=r.querySelector('.log'), orig=ta.value;
+    function fmt(v){ if(typeof v==='string') return v; try{ if(v instanceof Error) return v.name+': '+v.message; if(v instanceof Promise) return 'Promise { <pending> }'; var j=JSON.stringify(v); return j===undefined?String(v):j; }catch(e){ return String(v); } }
+    function line(t,cls){ var d=document.createElement('div'); if(cls) d.className=cls; d.textContent=t; log.appendChild(d); }
+    var fake={log:function(){ line([].map.call(arguments,fmt).join(' ')); }, error:function(){ line([].map.call(arguments,fmt).join(' '),'er'); }};
+    fake.warn=fake.error; fake.info=fake.log;
+    r.querySelector('[data-run]').addEventListener('click',function(e){ e.stopPropagation(); log.textContent='';
+      try{ var f=new Function('console','return (async function(){"use strict";\n'+ta.value+'\n})();'); f(fake).catch(function(err){ line('Uncaught (in promise) '+fmt(err),'er'); }); }
+      catch(err){ line(fmt(err),'er'); } });
+    r.querySelector('[data-reset]').addEventListener('click',function(e){ e.stopPropagation(); ta.value=orig; log.textContent=''; });
+  });
+  [].forEach.call(document.querySelectorAll('.el'),function(el){
+    var D=JSON.parse(el.getAttribute('data-steps')), i=-1, lns=el.querySelectorAll('.ln'), note=el.querySelector('.note'), sn=el.querySelector('.stepn');
+    function show(){ var s=D.steps[i]||{};
+      [].forEach.call(lns,function(l,k){ l.classList.toggle('on', s.line===k+1 || (s.lines||[]).indexOf(k+1)>=0); });
+      D.cols.forEach(function(c){ var col=el.querySelector('[data-col="'+c+'"]'); [].slice.call(col.querySelectorAll('.chip')).forEach(function(x){ col.removeChild(x); });
+        (s[c]||[]).forEach(function(t){ var d=document.createElement('div'); d.className='chip'; d.style.background=COLC[c]; d.textContent=t; col.appendChild(d); }); });
+      note.innerHTML = i<0 ? 'Press step to walk through it.' : s.note; sn.textContent=(i+1)+' / '+D.steps.length; }
+    el.querySelector('[data-step]').addEventListener('click',function(e){ e.stopPropagation(); i = i>=D.steps.length-1 ? -1 : i+1; show(); });
+    el.querySelector('[data-back]').addEventListener('click',function(e){ e.stopPropagation(); if(i>-1) i--; show(); });
+    show();
+  });
+
+  function cycler(sel, apply){ [].forEach.call(document.querySelectorAll(sel),function(b){ var vals=b.getAttribute('data-a').split(','), i=0; b.addEventListener('click',function(e){ e.stopPropagation(); i=(i+1)%vals.length; apply(b,vals[i]); b.classList.add('on'); }); }); }
   cycler('#bmTg button',function(b,v){ $('bm').style.setProperty(b.getAttribute('data-v'),v); b.textContent=b.textContent.split(':')[0]+': '+v; });
   var fx=$('fx');
   cycler('#fxTg button',function(b,v){ fx.style[b.getAttribute('data-p')]=v; var s=fx.style; $('fxNote').textContent='flex-direction:'+(s.flexDirection||'row')+'; justify-content:'+(s.justifyContent||'flex-start')+'; align-items:'+(s.alignItems||'stretch'); });
-  [].forEach.call(document.querySelectorAll('#gdTg button'),function(b){ b.addEventListener('click',function(){ [].forEach.call(this.parentNode.children,function(x){x.classList.remove('on');}); this.classList.add('on'); var c=this.getAttribute('data-c'); $('gd').style.gridTemplateColumns=c; $('gdNote').textContent='grid-template-columns: '+c; }); });
-  // S4: events
-  [].forEach.call(document.querySelectorAll('.evb'),function(b){ b.addEventListener('click',function(e){ var d=document.createElement('div'); d.innerHTML='<span style="color:var(--js)">click</span> → handler("'+e.target.textContent+'") · '+new Date().toLocaleTimeString(); var L=$('evLog'); if(L.children.length>=4) L.removeChild(L.firstChild); L.appendChild(d); }); });
-  // S4: event loop
-  $('elBtn').addEventListener('click',function(){ var L=$('elLog'); L.textContent=''; var out=function(t,c){ var d=document.createElement('div'); d.innerHTML='<span style="color:'+c+'">'+t+'</span>'; L.appendChild(d); };
-    out('1 start  (sync)','#cdd5ea'); setTimeout(function(){ out('4 timeout  (task queue)','#f7d046'); },350); Promise.resolve().then(function(){ setTimeout(function(){ out('3 promise  (microtask)','#a78bfa'); },200); }); setTimeout(function(){},0); out('2 end  (sync)','#cdd5ea'); });
-  // S5: lab
-  var LAB=['<ul id="projects"></ul>','<style>','  body{font:14px system-ui;margin:10px} li{padding:6px 8px;margin:4px 0;background:#f1f3f8;border-radius:6px;cursor:pointer}','  li.done{text-decoration:line-through;opacity:.6}','</style>','<script>','// fake fetch so this runs offline (stands in for /rest/v1.0/projects)','const fetch = async () => ({ ok: true, json: async () => [','  { id: 42, name: "Riverside Tower", open_rfis: 7 },','  { id: 43, name: "Mercy Hospital Wing", open_rfis: 2 }','] });','','async function loadProjects() {','  const res = await fetch("/rest/v1.0/projects");','  if (!res.ok) throw new Error(res.status);','  const projects = await res.json();','  const ul = document.querySelector("#projects");','  ul.textContent = "";','  for (const p of projects) {','    const li = document.createElement("li");','    li.textContent = p.name + " · " + p.open_rfis + " RFIs";','    li.addEventListener("click", () => li.classList.toggle("done"));','    ul.appendChild(li);','  }','}','loadProjects();','<\/script>'].join('\n');
-  function labRun(){ $('labOut').srcdoc=$('labSrc').value; }
-  $('labSrc').value=LAB; labRun();
-  $('labRun').addEventListener('click',labRun);
-  $('labReset').addEventListener('click',function(){ $('labSrc').value=LAB; labRun(); });
+  [].forEach.call(document.querySelectorAll('#gdTg button'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); [].forEach.call(this.parentNode.children,function(x){x.classList.remove('on');}); this.classList.add('on'); var c=this.getAttribute('data-c'); $('gd').style.gridTemplateColumns=c; $('gdNote').textContent='grid-template-columns: '+c; }); });
+  // cascade resolver
+  $('casBtn').addEventListener('click',function(e){ e.stopPropagation(); var rows=[].slice.call(document.querySelectorAll('#cas .r'));
+    rows.forEach(function(r){ r.classList.remove('win','lose'); });
+    rows.forEach(function(r,i){ setTimeout(function(){ r.classList.add(i===3?'win':'lose'); if(i===3) $('casBtn').textContent='#intro wins (1-0-0): text is red'; },300*(i+1)); }); });
+  // bubbling animation
+  (function(){ var root=$('bub'), L=$('bubLog'), busy=false;
+    root.querySelector('.tgt').addEventListener('click',function(e){ e.stopPropagation(); if(busy) return; busy=true; L.textContent='';
+      var seq=[['capture','section'],['capture','article'],['capture','div'],['target','button'],['bubble','div'],['bubble','article'],['bubble','section']];
+      seq.forEach(function(s,i){ setTimeout(function(){ [].forEach.call(root.querySelectorAll('.lvl,.tgt'),function(x){ x.classList.remove('hit','cap'); });
+        var el=root.querySelector('[data-n="'+s[1]+'"]'); el.classList.add(s[0]==='capture'?'cap':'hit');
+        var d=document.createElement('div'); d.innerHTML='<span style="color:'+(s[0]==='capture'?'var(--css)':'var(--js)')+'">'+s[0]+'</span> → '+s[1]; L.appendChild(d);
+        if(i===seq.length-1) setTimeout(function(){ busy=false; },400); },450*i); }); }); })();
 
   var start=parseInt((location.hash||'').slice(1),10); go(isNaN(start)?0:start-1);
 })();

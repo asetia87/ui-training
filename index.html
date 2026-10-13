@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#07080d">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#07080d"><link rel="manifest" href="manifest.json"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Frontend for Backend Engineers · Course</title>
 <style>
 :root{--bg:#07080d;--panel:#121622;--line:#2a3145;--text:#eef1f8;--muted:#a3acc2;--dim:#5d6680;--html:#ff7a45;--css:#4ea8ff;--js:#f7d046;--green:#3ddc97;--purple:#a78bfa;--pink:#ff5c8a}
@@ -29,10 +29,11 @@ h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)
 </style></head>
 <body><div class="wrap">
   <div class="kick">Frontend for backend engineers</div>
-  <h1>From pixels to <span class="grad">Module Federation</span></h1>
-  <p class="sub">Swipeable lessons for judging and steering AI-generated React/TypeScript code. Each one takes 5 to 12 minutes, so they're a better use of your phone than doomscrolling.</p>
+  <h1>From pixels to <span class="grad">production UI</span></h1>
+  <p class="sub">Swipeable lessons for judging and steering AI-generated React/TypeScript code, plus a working-engineer track: package management, micro-frontend platforms, AI chat UIs, Playwright and day one with coding agents. Each one takes 5 to 12 minutes.</p>
   <div class="overall"><div class="row"><span>Course progress</span><b id="ovTxt">0%</b></div><div class="bar"><i id="ovBar"></i></div></div>
   <h2>Core path</h2><div id="core"></div>
+  <h2>Working-engineer track</h2><div id="track"></div>
   <h2>Bonus deep dives</h2><div id="bonus"></div>
   <div class="foot">Progress is saved on this device. <button type="button" id="reset">Reset progress</button></div>
 </div>
@@ -47,13 +48,19 @@ h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)
     {n:5,t:'Module Federation + lab',d:'Micro-frontends, remoteEntry.js, shared deps and runtime loading.',f:'part5-module-federation.html'},
     {n:6,t:'Deeper React & patterns',d:'Hooks in depth, data fetching, performance and reviewing AI code.',f:'part6-deeper-react-patterns.html'},
     {n:7,t:'Jest & React Testing Library',d:'Testing components the way users use them.',f:'part7-testing-jest-rtl.html'}];
+  var TRACK=[
+    {n:8,t:'Node, npm, Yarn & pnpm',d:'package.json, semver, lockfiles, workspaces, private registries and supply-chain safety.',f:'part8-node-npm-yarn.html'},
+    {n:9,t:'Micro-frontend platform anatomy',d:'App shell, registries, routing ownership, custom elements, shared SDKs, overrides, CDN hosting and CI/CD.',f:'part9-mfe-platform-anatomy.html'},
+    {n:10,t:'Building AI/chat UIs in React',d:'Streaming, iframes and postMessage, auth handoff, optimistic UI, safe markdown and rules for coding agents.',f:'part10-ai-chat-ui.html'},
+    {n:11,t:'Playwright E2E + lab',d:'Locators, auto-wait, storageState, stubbing, page objects, traces, CI and reviewing specs.',f:'part11-playwright-e2e.html'},
+    {n:12,t:'Day one with coding agents',d:'Setup checklist, the daily loop, reading failing CI, reviewing agent-written React and TS.',f:'part12-day-one-with-coding-agents.html'}];
   var BONUS=[
     {n:'B1',t:'How the browser renders',d:'DOM, CSSOM, layout, paint, composite and the event loop.',f:'01-how-the-browser-renders.html'},
     {n:'B2',t:'How a React app loads',d:'A Network-tab walkthrough: shell, bundles, JSON, routing.',f:'01b-how-a-react-app-loads.html'}];
   function prog(f){ try{ var o=JSON.parse(localStorage.getItem('lp:'+f)||'{}'); var man=localStorage.getItem('done:'+f)==='1'; var pct=o.total?Math.round(100*o.max/o.total):0; if(man||pct>=100) pct=100; return pct; }catch(e){ return 0; } }
   function render(){
     var tot=0,cnt=0;
-    [['core',CORE],['bonus',BONUS]].forEach(function(g){
+    [['core',CORE],['track',TRACK],['bonus',BONUS]].forEach(function(g){
       var el=document.getElementById(g[0]); el.innerHTML='';
       g[1].forEach(function(p,i){
         var built=!!p.f, pct=built?prog(p.f):0; if(built){tot+=pct;cnt++;}
@@ -63,7 +70,7 @@ h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)
         el.appendChild(a);
       });
     });
-    var ov=Math.round(tot/(CORE.length+BONUS.length)); document.getElementById('ovTxt').textContent=ov+'% · '+cnt+' of '+(CORE.length+BONUS.length)+' lessons available'; document.getElementById('ovBar').style.width=ov+'%';
+    var ov=Math.round(tot/(CORE.length+TRACK.length+BONUS.length)); document.getElementById('ovTxt').textContent=ov+'% · '+cnt+' of '+(CORE.length+TRACK.length+BONUS.length)+' lessons available'; document.getElementById('ovBar').style.width=ov+'%';
   }
   document.addEventListener('click',function(e){ var b=e.target.closest('.chk'); if(!b) return; e.preventDefault(); e.stopPropagation(); var f=b.getAttribute('data-f');
     if(prog(f)>=100){ localStorage.removeItem('done:'+f); localStorage.removeItem('lp:'+f); } else localStorage.setItem('done:'+f,'1'); render(); });

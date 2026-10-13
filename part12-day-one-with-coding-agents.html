@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#07080d"><link rel="manifest" href="manifest.json"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Part 12 · Day one as a frontend dev with coding agents</title><style>
+:root{
+  --bg:#07080d; --panel:#121622; --panel2:#181d2b; --line:#2a3145; --text:#eef1f8; --muted:#a3acc2; --dim:#5d6680;
+  --html:#ff7a45; --css:#4ea8ff; --js:#f7d046; --green:#3ddc97; --purple:#a78bfa; --pink:#ff5c8a; --cyan:#4ee6e0;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;overscroll-behavior:none}
+.app{position:fixed;inset:0;display:flex;justify-content:center;background:radial-gradient(1200px 600px at 50% -10%,#141a2e 0,transparent 60%),var(--bg)}
+.stage{position:relative;width:100%;max-width:460px;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:pan-y}
+@media (min-width:600px){.stage{height:min(100%,900px);margin:auto;border-radius:28px;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.6)}}
+.stage::before{content:"";position:absolute;inset:0;background:radial-gradient(500px 300px at 85% 10%,rgba(167,139,250,.10),transparent 70%),radial-gradient(500px 300px at 0% 90%,rgba(78,168,255,.08),transparent 70%);pointer-events:none}
+.top{position:absolute;left:0;right:0;top:0;z-index:5;padding:calc(env(safe-area-inset-top) + 10px) 14px 0}
+.segs{display:flex;gap:3px}
+.seg{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+.seg i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--css),var(--purple));transition:width .35s ease}
+.seg.done i{width:100%}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:12px;color:var(--muted);letter-spacing:.02em}
+.meta b{color:var(--text);font-weight:600}
+.card{position:absolute;inset:0;padding:calc(env(safe-area-inset-top) + 58px) 22px calc(env(safe-area-inset-bottom) + 64px);display:flex;flex-direction:column;opacity:0;visibility:hidden;transform:translateX(40px) scale(.98);transition:opacity .35s ease,transform .45s cubic-bezier(.2,.8,.2,1),visibility 0s linear .45s}
+.card.past{transform:translateX(-40px) scale(.98)}
+.card.active{opacity:1;visibility:visible;transform:none;transition:opacity .35s ease,transform .45s cubic-bezier(.2,.8,.2,1),visibility 0s}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--purple);margin-bottom:6px}
+.visual{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;margin:4px 0 14px}
+.visual svg{width:100%;height:100%;max-height:330px;overflow:visible}
+h1,h2{margin:0 0 10px;line-height:1.15;letter-spacing:-.02em}
+h1{font-size:clamp(30px,9vw,40px)}
+h2{font-size:clamp(22px,6.4vw,28px)}
+p{margin:0 0 8px;font-size:clamp(15px,4.2vw,17px);line-height:1.5;color:var(--muted)}
+p b,p strong{color:var(--text);font-weight:600}
+code,.mono{font-family:var(--mono);font-size:.9em}
+p code,.analogy code{background:#1b2131;border:1px solid var(--line);padding:1px 5px;border-radius:6px;color:#dfe5f5}
+.analogy{display:flex;gap:10px;align-items:flex-start;background:linear-gradient(135deg,rgba(78,168,255,.10),rgba(167,139,250,.10));border:1px solid rgba(120,140,255,.25);border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.45;color:#cfd6ea;margin-top:6px}
+.analogy::before{content:"⚙";font-size:15px;color:var(--css);line-height:1.3}
+.analogy b{color:#fff}
+.bottom{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:0 14px calc(env(safe-area-inset-bottom) + 12px)}
+.nav{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:rgba(18,22,34,.8);color:var(--text);font-size:20px;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(8px)}
+.nav:disabled{opacity:.3}
+.hint{font-size:12px;color:var(--dim)}
+svg *{transform-box:fill-box;transform-origin:center}
+.active .pop{animation:pop .55s cubic-bezier(.2,.9,.3,1.35) both;animation-delay:var(--d,0s)}
+.active .fade{animation:fade .6s ease both;animation-delay:var(--d,0s)}
+.active .rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0s)}
+.growx{transform-origin:left center}
+.active .growx{animation:growx .6s ease both;animation-delay:var(--d,0s)}
+.active .draw{stroke-dasharray:var(--len,300);animation:draw 1s ease both;animation-delay:var(--d,0s)}
+.flow{stroke-dasharray:4 6;animation:flow 1s linear infinite}
+.pulse{animation:pulse 2s ease-in-out infinite;animation-delay:var(--pd,0s)}
+@keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes growx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes draw{from{stroke-dashoffset:var(--len,300)}to{stroke-dashoffset:0}}
+@keyframes flow{to{stroke-dashoffset:-20}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes goR{0%{transform:translateX(0);opacity:0}10%,85%{opacity:1}100%{transform:translateX(60px);opacity:0}}
+@keyframes goL{0%{transform:translateX(0);opacity:0}10%,85%{opacity:1}100%{transform:translateX(-72px);opacity:0}}
+.req{animation:goR 2.4s ease-in-out infinite}
+.chunk{opacity:0;animation:goL 2.4s linear infinite;animation-delay:var(--d,0s)}
+.titlebadge{display:inline-flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 10px;margin-bottom:14px;align-self:flex-start;background:rgba(255,255,255,.03)}
+.titlebadge i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+.tapme{margin-top:6px;font-size:13px;color:var(--dim);animation:pulse 1.8s infinite}
+.grad{background:linear-gradient(90deg,var(--html),var(--js) 35%,var(--css) 70%,var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lay{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px}
+.lay-frame{width:100%;border:1px solid var(--line);border-radius:14px;padding:8px;background:#0d111b;display:flex;flex-direction:column;gap:6px;animation:resize 5s ease-in-out infinite alternate;position:relative}
+@keyframes resize{0%,15%{width:100%}85%,100%{width:52%}}
+.lay .b{border-radius:8px;font:600 11px/1 var(--mono);display:flex;align-items:center;justify-content:center;color:#0b0e16;padding:0 4px;overflow:hidden;white-space:nowrap}
+.lay .hdr{height:26px;background:var(--css)}
+.lay-row{display:flex;gap:6px}
+.lay .side{flex:0 0 26%;height:54px;background:var(--purple)}
+.lay .main{flex:1;height:54px;background:var(--green)}
+.lay-cards{display:flex;flex-wrap:wrap;gap:6px}
+.lay .c{flex:1 1 64px;height:30px;background:var(--js)}
+.ruler{font:12px var(--mono);color:var(--muted);display:flex;align-items:center;gap:8px}
+.ruler span{display:inline-block;height:2px;width:40px;background:linear-gradient(90deg,var(--pink),var(--js));border-radius:2px}
+.comp{position:relative;width:250px;height:230px;perspective:800px}
+.comp-in{position:absolute;inset:0;transform-style:preserve-3d}
+.layer{position:absolute;left:25px;top:30px;width:200px;height:170px;border-radius:14px;border:1px solid rgba(255,255,255,.18);transform-origin:center;animation:explode 6s ease-in-out infinite;--z:0px;display:flex;align-items:flex-end;justify-content:flex-end;padding:8px;font:600 10px var(--mono);color:rgba(255,255,255,.85)}
+.l1{--z:-60px;background-color:#151b30;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:16px 16px}
+.l2{--z:0px;background:rgba(78,168,255,.18)}
+.l2::before{content:"";position:absolute;left:66px;top:16px;width:112px;height:10px;border-radius:5px;background:rgba(255,255,255,.75);box-shadow:0 22px 0 rgba(255,255,255,.4),0 40px 0 rgba(255,255,255,.4),0 58px 0 rgba(255,255,255,.4),0 86px 0 -1px rgba(61,220,151,.7)}
+.l3{--z:60px;width:56px;background:rgba(167,139,250,.6);animation-name:explode3;align-items:flex-start;justify-content:center;padding-top:10px;text-align:center}
+@keyframes explode{0%,22%,100%{transform:rotateX(56deg) rotateZ(-38deg) translateZ(var(--z))}48%,80%{transform:rotateX(0) rotateZ(0) translateZ(0)}}
+@keyframes explode3{0%,22%,100%{transform:rotateX(56deg) rotateZ(-38deg) translateZ(var(--z))}48%{transform:translateX(-60px)}62%,80%{transform:translateX(0)}}
+.comp-tag{position:absolute;left:0;right:0;bottom:-6px;text-align:center;font:12px var(--mono);color:var(--muted)}
+.cost{width:100%;display:grid;grid-template-columns:92px repeat(5,1fr);gap:6px;font-size:10.5px;align-items:center}
+.cost .h{color:var(--dim);text-align:center;font-weight:600;letter-spacing:.02em}
+.cost .lbl{font:600 11px var(--mono);color:var(--text);line-height:1.3}
+.cost .lbl small{display:block;color:var(--dim);font-weight:400}
+.cell{height:30px;border-radius:8px;background:#151a27;border:1px dashed #262d40}
+.cell.on{background:var(--c);border:0;box-shadow:0 0 14px var(--c)}
+.active .cell.on{animation:light .45s ease both;animation-delay:var(--d,0s)}
+@keyframes light{from{opacity:.1;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+.costtag{grid-column:2/7;font-size:11px;color:var(--muted);text-align:right;margin-top:-2px}
+.qcode{font:13px/1.55 var(--mono);background:#0d111b;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0 14px;color:#cdd5ea;white-space:pre;overflow-x:auto}
+.qcode .k{color:var(--purple)}.qcode .s{color:var(--green)}.qcode .t{color:var(--html)}.qcode .c{color:var(--dim)}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);color:var(--text);font-size:15px;line-height:1.35;cursor:pointer;transition:transform .15s,border-color .2s,background .2s,opacity .2s}
+.opt:active{transform:scale(.98)}
+.opt:focus-visible{outline:2px solid var(--css)}
+.opt .l{flex:0 0 26px;height:26px;border-radius:8px;display:grid;place-items:center;background:#1e2436;font:700 12px var(--mono);color:var(--muted)}
+.opt code{font-size:13px}
+.opt.right{border-color:var(--green);background:rgba(61,220,151,.12)}
+.opt.right .l{background:var(--green);color:#06210f}
+.opt.wrong{border-color:var(--pink);background:rgba(255,92,138,.12);animation:shake .4s}
+.opt.wrong .l{background:var(--pink);color:#2a0612}
+.opts.done .opt:not(.right):not(.wrong){opacity:.45}
+@keyframes shake{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+.fb{margin-top:12px;font-size:14px;line-height:1.45;color:var(--muted);opacity:0;transform:translateY(8px);transition:.3s}
+.fb.show{opacity:1;transform:none}
+.fb b{color:var(--text)}
+.fb code{background:#1b2131;padding:1px 4px;border-radius:5px;color:#dfe5f5}
+.fb .tag{display:inline-block;font-weight:800;margin-right:4px}
+.qspacer{flex:1}
+.rx{width:100%;display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.rx-row{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.rx-box{flex:1;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:10px 8px;font:11px/1.4 var(--mono);color:#cdd5ea;min-height:62px;display:flex;flex-direction:column;justify-content:center}
+.rx-box .cap{font:700 9px system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.rx-arrow{color:var(--purple);font:700 13px var(--mono);flex:0 0 auto}
+.rx-f{flex:0 0 auto;background:linear-gradient(135deg,rgba(167,139,250,.25),rgba(78,168,255,.2));border:1px solid rgba(167,139,250,.5);border-radius:12px;padding:10px 7px;font:700 12px var(--mono)}
+.rx-ui{background:#f5f6fa;color:#141824;border-radius:14px;padding:9px 10px;font-size:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);min-height:62px}
+.rx-ui .bar{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px}
+.rx-ui .badge{background:#ff5c1a;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px}
+.rx-ui ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px}
+.rx-ui li{background:#e7e9f2;border-radius:6px;padding:3px 6px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flash{animation:flash .9s ease}
+@keyframes flash{0%{box-shadow:0 0 0 3px #3ddc97}100%{box-shadow:0 0 0 0 transparent}}
+.rx-note{font-size:12px;color:var(--dim);text-align:center}
+.btn{all:unset;cursor:pointer;align-self:center;padding:10px 18px;border-radius:999px;background:linear-gradient(135deg,var(--purple),var(--css));color:#fff;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(120,120,255,.35)}
+.btn:active{transform:scale(.96)}
+.btn.ghost{background:transparent;border:1px solid var(--line);box-shadow:none;color:var(--text);align-self:flex-start}
+.flowchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;width:100%}
+.chip{padding:7px 10px;border-radius:10px;font:700 12px var(--mono);color:#0b0e16;display:inline-block}
+.arr{color:var(--dim);font-size:12px}
+.take{list-style:none;padding:0;margin:14px 0 0;display:flex;flex-direction:column;gap:8px;width:100%}
+.take li{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13.5px;line-height:1.4;color:#cfd6ea}
+.take li b{color:#fff}
+.score{font-size:13px;color:var(--muted);margin-top:10px}
+.next-tags{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}
+.next-tags span{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted);font-family:var(--mono)}
+@media (max-height:700px){.visual svg{max-height:230px}.qcode{font-size:12px;padding:8px 10px;margin:4px 0 8px}.opt{padding:10px 12px}.analogy{font-size:13px;padding:8px 10px}p{font-size:15px}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+/* ---- lesson 1b additions ---- */
+.net{width:100%;background:#0d111b;border:1px solid var(--line);border-radius:12px;overflow:hidden;font:10.5px/1.2 var(--mono)}
+.net-h,.net-r{display:grid;grid-template-columns:1.35fr 46px 40px 1fr;gap:6px;align-items:center;padding:6px 9px}
+.net-h{color:var(--dim);font:700 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--line);background:#121622}
+.net-r{border-bottom:1px solid #161b28;color:#cdd5ea}
+.net-r:last-of-type{border-bottom:0}
+.net-r .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.net-r .t{color:var(--muted);font-size:9.5px}
+.net-r .z{color:var(--muted);text-align:right;font-size:9.5px}
+.net-r.dim{color:#59627a}.net-r.dim .t,.net-r.dim .z{color:#454d63}.net-r.dim .wf i{opacity:.35}
+.net-r.hl{background:rgba(78,168,255,.09);box-shadow:inset 3px 0 0 var(--css)}
+.wf{position:relative;height:9px;background:repeating-linear-gradient(90deg,transparent 0 19.6%,#1a2030 19.6% 20%)}
+.wf i{position:absolute;top:0;height:100%;border-radius:3px;left:var(--s);width:var(--w);background:var(--c);transform-origin:left center}
+.active .net-r{animation:rise .4s ease both;animation-delay:var(--d,0s)}
+.active .wf i{animation:growx .5s ease both;animation-delay:calc(var(--d,0s) + .15s)}
+.net-foot{padding:5px 9px;color:var(--dim);font-size:9px;display:flex;justify-content:space-between;border-top:1px solid var(--line);background:#121622}
+.netwrap{width:100%;display:flex;flex-direction:column;gap:10px}
+.cb{width:100%;font:11.5px/1.5 var(--mono);background:#0d111b;border:1px solid var(--line);border-radius:12px;color:#cdd5ea;overflow:hidden}
+.cb pre{margin:0;padding:9px 11px;white-space:pre;overflow-x:auto;font:inherit}
+.cb-h{display:flex;justify-content:space-between;align-items:center;padding:5px 11px;background:#121622;border-bottom:1px solid var(--line);font:700 9px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.cb-h .tagc{font:700 9.5px var(--mono);letter-spacing:0;text-transform:none;padding:2px 7px;border-radius:999px}
+.k{color:var(--purple)}.s{color:var(--green)}.t{color:var(--html)}.c{color:var(--dim)}.y{color:var(--js)}.bl{color:var(--css)}
+.mk{background:rgba(247,208,70,.18);color:var(--js);border-radius:4px;padding:0 2px}
+.stack{width:100%;display:flex;flex-direction:column;gap:8px}
+.down{align-self:center;color:var(--purple);font:700 13px var(--mono);line-height:1}
+/* phone mock */
+.phone{width:178px;height:300px;border-radius:26px;border:2px solid #2a3145;background:#0b0e16;padding:12px 10px;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.5);flex:0 0 auto;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.url{font:10px var(--mono);background:#181d2b;border-radius:8px;padding:6px 8px;color:var(--muted);white-space:nowrap;overflow:hidden}
+.url b{color:var(--text);font-weight:600}
+.pg{flex:1;border-radius:12px;background:#f3f5fa;padding:10px 9px;display:flex;flex-direction:column;gap:7px;color:#141824;font-size:11px;overflow:hidden;position:relative}
+.pg.blank{background:#fff}
+.pg .ttl{font-weight:800;font-size:12.5px;display:flex;justify-content:space-between;align-items:center}
+.sk{height:30px;border-radius:8px;background:linear-gradient(90deg,#e1e5ee 0,#f0f2f7 40%,#e1e5ee 80%);background-size:250% 100%;animation:shimmer 1.3s linear infinite}
+.sk.sm{height:12px;width:60%}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:-150% 0}}
+.prow{all:unset;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e3e6ee;border-radius:8px;padding:7px 8px;font-size:10.5px;font-weight:600;color:#141824;cursor:pointer}
+.prow span{font-weight:500;font-size:9px;color:#fff;background:#3ddc97;border-radius:999px;padding:1px 6px}
+.prow span.pl{background:#f7a046}
+.prow.tapme2{box-shadow:0 0 0 0 rgba(255,92,26,.6);animation:ring 1.6s infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,92,26,.55)}70%{box-shadow:0 0 0 8px rgba(255,92,26,0)}100%{box-shadow:0 0 0 0 rgba(255,92,26,0)}}
+.dom{font:10.5px/1.55 var(--mono);color:#cdd5ea;background:#0d111b;border:1px solid var(--line);border-radius:12px;padding:10px;flex:1;min-width:0;white-space:pre;overflow:hidden}
+.row2{display:flex;gap:12px;align-items:center;width:100%;justify-content:center}
+.swap-a{animation:none}
+.active .later{animation:fade .5s ease both;animation-delay:var(--d,1.5s)}
+.active .gone{animation:gone .4s ease both;animation-delay:var(--d,1.5s)}
+@keyframes gone{to{opacity:0;height:0;margin:0;padding:0}}
+/* comparison table */
+.vs{width:100%;display:grid;grid-template-columns:76px 1fr 1fr;gap:5px;font-size:12px;line-height:1.3}
+.vs div{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px 8px;color:#cfd6ea}
+.vs .vh{font-weight:800;text-align:center;border:0}
+.vs .vh.code{background:rgba(247,208,70,.14);color:var(--js)}
+.vs .vh.data{background:rgba(61,220,151,.14);color:var(--green)}
+.vs .vl{background:transparent;border:0;color:var(--dim);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;padding:0}
+.trio{width:100%;display:flex;flex-direction:column;gap:7px}
+.trio .cb pre{padding:6px 10px;font-size:10.5px}
+.find{font-size:12px;color:var(--muted);text-align:center}
+.reload{display:inline-block;font:700 10px var(--mono);padding:3px 8px;border-radius:999px;background:rgba(61,220,151,.15);color:var(--green);border:1px solid rgba(61,220,151,.4)}
+.backb{all:unset;cursor:pointer;font-size:10px;color:#4a57c9;font-weight:700}
+.detail .big{font-size:13px;font-weight:800}
+.kv{display:flex;justify-content:space-between;font-size:10px;background:#fff;border-radius:6px;padding:5px 7px;border:1px solid #e3e6ee}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);justify-content:center}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+
+.cb pre{font-size:10.5px}.stack{gap:7px}.sect .num{font-size:80px}
+a.btn{text-decoration:none;display:inline-block}
+
+</style></head><body><style>
+.sect h1{font-size:clamp(34px,10vw,46px)}
+.sect .num{font:800 90px/1 system-ui;background:linear-gradient(135deg,var(--css),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent;opacity:.9}
+.vwrap{width:100%;display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.scrollv{width:100%;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;user-select:text;-webkit-user-select:text;padding-bottom:4px}
+.card.lab .visual{align-items:stretch}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:12px;line-height:1.4;color:#cfd6ea}
+.box b{color:#fff}.box small{color:var(--dim)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;width:100%;counter-reset:st}
+.steps li{counter-increment:st;display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 9px;font-size:12px;color:#cfd6ea;opacity:.3}
+.steps li::before{content:counter(st);flex:0 0 20px;height:20px;border-radius:6px;display:grid;place-items:center;background:#1e2436;font:700 10px var(--mono);color:var(--muted)}
+.steps li code{font-size:11px;color:var(--js)}
+.active .steps li{animation:lit 7s ease infinite;animation-delay:var(--d,0s)}
+@keyframes lit{0%{opacity:.3}4%,70%{opacity:1;border-color:var(--css);background:rgba(78,168,255,.10)}90%,100%{opacity:.3}}
+.pill{display:inline-block;font:700 10px var(--mono);padding:2px 7px;border-radius:999px;margin:1px}
+.warn{border-color:rgba(255,92,138,.5)!important;background:rgba(255,92,138,.08)!important}
+.ok{border-color:rgba(61,220,151,.5)!important;background:rgba(61,220,151,.08)!important}
+.chk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;width:100%}
+.chk li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 9px 6px 30px;font-size:12px;line-height:1.35;color:#cfd6ea;position:relative}
+.chk li::before{content:"✓";position:absolute;left:9px;top:5px;color:var(--green);font-weight:800}
+.chk li b{color:#fff}
+.bleed button{all:unset;font:700 11px system-ui;padding:6px 10px;border-radius:8px;background:#ff5c1a;color:#fff}
+.active .bleed .victim{animation:bleed 4s ease-in-out infinite}
+@keyframes bleed{0%,35%{background:#ff5c1a;border-radius:8px}45%,85%{background:#c21d6b;border-radius:0;transform:skewX(-6deg)}100%{background:#ff5c1a}}
+.flashr{animation:flashr 2.4s ease infinite;animation-delay:var(--d,0s)}
+@keyframes flashr{0%,100%{fill:#151a27}20%,40%{fill:var(--pink)}}
+.blink{animation:blink 2.4s steps(1) infinite;animation-delay:var(--d,0s)}
+@keyframes blink{0%{opacity:1}50%{opacity:.2}}
+.mv{animation:mv 3s ease-in-out infinite;animation-delay:var(--d,0s)}
+@keyframes mv{0%{transform:translate(0,0);opacity:0}10%{opacity:1}80%{opacity:1}100%{transform:translate(var(--tx,0),var(--ty,0));opacity:0}}
+</style>
+<div class="app"><main class="stage" id="stage">
+  <div class="top"><div class="segs" id="segs"></div><div class="meta"><span><b>Part 12</b> · Day one with coding agents</span><a href="index.html" style="color:var(--muted);text-decoration:none;margin-left:auto;margin-right:10px">⌂ home</a><span id="count" aria-live="polite"></span></div></div>
+  <div class="bottom" id="bottomBar"><button class="nav" id="prev" type="button" aria-label="Previous card">‹</button><span class="hint">tap · swipe · ← →</span><button class="nav" id="next" type="button" aria-label="Next card">›</button></div>
+</main></div>
+<script>var CARDS = [{"sect": 1, "num": "1️⃣", "kicker": "Part 12 · Day one", "h": "Day one as a frontend dev <span class=\"grad\">with coding agents<\/span>", "p": "Set up a machine that matches CI, learn the daily loop, read a failing pipeline calmly, and review agent-written React/TypeScript with a checklist you can actually use.", "badge": "~24 min · 40 cards · 6 quizzes", "first": true}, {"sect": 1, "num": "1", "kicker": "Section 1 · Machine setup", "h": "A machine that behaves like CI", "p": "Most \"works on my machine\" problems in JavaScript are version drift. Pin everything the repo lets you pin."}, {"k": "Step by step", "h": "Setup in order", "v": "<ol class=\"steps\"><li style=\"--d:0.0s\"><span>Install a <b>Node version manager<\/b> (nvm, fnm or Volta); never use a system Node<\/span><\/li><li style=\"--d:0.6s\"><span><code>cd<\/code> into the repo: it reads <code>.nvmrc<\/code> / <code>.node-version<\/code> / <code>engines<\/code> and installs that exact Node<\/span><\/li><li style=\"--d:1.2s\"><span>Enable <b>Corepack<\/b> so <code>packageManager<\/code> in <code>package.json<\/code> pins npm/pnpm/Yarn to the repo's version<\/span><\/li><li style=\"--d:1.8s\"><span>Install with the <b>lockfile<\/b>: <code>npm ci<\/code> / <code>pnpm install --frozen-lockfile<\/code> / <code>yarn install --immutable<\/code><\/span><\/li><li style=\"--d:2.4s\"><span>Copy <code>.env.example<\/code> to <code>.env.local<\/code>; never commit real secrets<\/span><\/li><li style=\"--d:3.0s\"><span>Run the same scripts CI runs: <code>lint<\/code>, <code>typecheck<\/code>, <code>test<\/code>, <code>build<\/code><\/span><\/li><li style=\"--d:3.6s\"><span>Install editor extensions: ESLint, Prettier, TypeScript (use the workspace TS version)<\/span><\/li><\/ol>", "an": "Same idea as pinning a JDK with SDKMAN or Ruby with rbenv plus <code>Gemfile.lock<\/code>."}, {"k": "package.json", "h": "Reading package.json on day one", "cmp": [["JSON", "{\n  \"packageManager\": \"pnpm@9.12.0\",\n  \"engines\": { \"node\": \">=20.11\" },\n  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"tsc -b && vite build\",\n    \"typecheck\": \"tsc --noEmit\",\n    \"lint\": \"eslint .\",\n    \"test\": \"vitest run\",\n    \"e2e\": \"playwright test\"\n  }\n}", "package.json"]], "p": "<code>scripts<\/code> is the repo's command menu: read it before anything else. CI almost always calls these exact names."}, {"k": "Editor", "h": "Editor settings that save hours", "v": "<ul class=\"chk\"><li class=\"rise\" style=\"--d:0.00s\"><b>Format on save<\/b> with Prettier; let it, not you, decide style<\/li><li class=\"rise\" style=\"--d:0.12s\"><b>ESLint fix on save<\/b> for import order and simple rules<\/li><li class=\"rise\" style=\"--d:0.24s\"><b>Use workspace TypeScript<\/b> (VS Code: \"Select TypeScript Version\") so the editor matches <code>tsc<\/code><\/li><li class=\"rise\" style=\"--d:0.36s\"><b>Go to definition<\/b> into <code>node_modules<\/code> types: the fastest way to learn a library's API<\/li><li class=\"rise\" style=\"--d:0.48s\"><b>React DevTools<\/b> and <b>browser DevTools<\/b> installed and pinned<\/li><\/ul>"}, {"k": "Setup gotchas", "h": "Caveats &amp; gotchas", "v": "<ul class=\"chk\"><li class=\"rise\" style=\"--d:0.00s\">Mixing package managers (an <code>npm install<\/code> in a pnpm repo) creates a second lockfile and subtle version drift. Delete it.<\/li><li class=\"rise\" style=\"--d:0.12s\"><code>npm install<\/code> updates the lockfile; <code>npm ci<\/code> refuses to. Use <code>ci<\/code> unless you are changing dependencies.<\/li><li class=\"rise\" style=\"--d:0.24s\">Global CLIs (<code>npm i -g<\/code>) hide version differences; prefer <code>npx<\/code> / <code>pnpm exec<\/code>.<\/li><li class=\"rise\" style=\"--d:0.36s\">Apple Silicon vs Linux CI: native modules and screenshot tests can differ. Trust CI's container as the reference.<\/li><\/ul>"}, {"quiz": true, "k": "Quiz 1 / 6 · Setup", "h": "CI fails with a dependency you do not have locally, and your lockfile diff shows hundreds of changes. Most likely cause?", "opts": [["CI is caching an old version", 0], ["You ran <code>npm install<\/code> (or the wrong package manager) and regenerated the lockfile", 1], ["Node versions never matter", 0]], "right": "Use the pinned package manager and a frozen install; revert the lockfile churn.", "wrong": "You <b>rewrote the lockfile<\/b>. Revert it and install with the frozen/ci command."}, {"k": "Section 1 · Go deeper", "h": "Go deeper", "v": "<div class=\"vwrap\"><a class=\"box rise\" style=\"--d:0.00s;text-decoration:none;display:block\" href=\"https://github.com/nvm-sh/nvm\" target=\"_blank\" rel=\"noopener\"><b>nvm ↗<\/b><br><small>the standard Node version manager<\/small><\/a><a class=\"box rise\" style=\"--d:0.15s;text-decoration:none;display:block\" href=\"https://nodejs.org/api/corepack.html\" target=\"_blank\" rel=\"noopener\"><b>Node.js docs: Corepack ↗<\/b><br><small>pinning the package manager per repo<\/small><\/a><a class=\"box rise\" style=\"--d:0.30s;text-decoration:none;display:block\" href=\"https://code.visualstudio.com/docs/typescript/typescript-tutorial\" target=\"_blank\" rel=\"noopener\"><b>VS Code: TypeScript tutorial ↗<\/b><br><small>editor setup that matches tsc<\/small><\/a><\/div>", "p": "Optional, but worth it. Tap a card to open it in a new tab."}, {"sect": 1, "num": "2", "kicker": "Section 2 · The daily loop", "h": "Working with a coding agent, every day", "p": "The agent writes a lot of code quickly. Your job shifts toward framing the task, constraining it, and verifying the result."}, {"k": "The loop", "h": "One task, start to finish", "v": "<ol class=\"steps\"><li style=\"--d:0.0s\"><span><b>Frame<\/b> the task: user-visible goal, acceptance criteria, files likely involved<\/span><\/li><li style=\"--d:0.6s\"><span><b>Point<\/b> the agent at conventions: AGENTS.md, an existing similar component, the test style<\/span><\/li><li style=\"--d:1.2s\"><span>Ask for a <b>plan<\/b> first for anything bigger than a small fix; correct it before code exists<\/span><\/li><li style=\"--d:1.8s\"><span>Let it implement in <b>small steps<\/b>; run <code>typecheck<\/code> and tests after each<\/span><\/li><li style=\"--d:2.4s\"><span><b>Run the app<\/b> and click through it yourself, including error and empty states<\/span><\/li><li style=\"--d:3.0s\"><span><b>Review the diff<\/b> with the checklist (Section 4) as if a stranger wrote it<\/span><\/li><li style=\"--d:3.6s\"><span>Open a small PR with a clear description; let CI and a human review it<\/span><\/li><\/ol>"}, {"k": "Prompts", "h": "A task description that works", "cmp": [["Bash", "Goal: on /tasks, users can filter by status (all / open / done).\nAcceptance:\n- Filter is a segmented control above the list, keyboard accessible\n- Selection is reflected in the URL (?status=open) and survives reload\n- Empty result shows \"No tasks match\" with a reset button\nConstraints:\n- Follow src/features/tasks/TaskList.tsx patterns; use our <SegmentedControl>\n- Data via the existing useTasks hook; no new dependencies\n- Tests: RTL + MSW for the three states; one Playwright spec for the URL\nFirst: propose a plan and the files you will touch.", "prompt"]], "p": "Concrete acceptance criteria give both the agent and you something to verify. \"Add filtering\" invites a different feature than the one you wanted."}, {"k": "Verification", "h": "Trust, but run it", "v": "<div class=\"g2\"><div class=\"box rise ok\" style=\"--d:0.00s\"><b>Typecheck<\/b><br><small><code>tsc --noEmit<\/code> catches most hallucinated APIs<\/small><\/div><div class=\"box rise ok\" style=\"--d:0.12s\"><b>Tests<\/b><br><small>do they fail if you revert the change? (Part 7)<\/small><\/div><div class=\"box rise ok\" style=\"--d:0.24s\"><b>Run it<\/b><br><small>the UI states, keyboard, narrow screen<\/small><\/div><div class=\"box rise warn\" style=\"--d:0.36s\"><b>Diff size<\/b><br><small>large unexpected diffs (lockfile, formatting, unrelated files) are a red flag<\/small><\/div><\/div>", "p": "Agents are confident whether or not they are right. The only evidence is a passing build plus behaviour you observed."}, {"k": "Loop gotchas", "h": "Caveats &amp; gotchas", "v": "<ul class=\"chk\"><li class=\"rise\" style=\"--d:0.00s\">Long sessions drift: the agent forgets early constraints. Restate them, or start a fresh session per task.<\/li><li class=\"rise\" style=\"--d:0.12s\">Agents happily \"fix\" a failing test by changing the assertion. Check what changed in test files.<\/li><li class=\"rise\" style=\"--d:0.24s\">Generated code often adds a dependency for something the platform already does. Question every new package.<\/li><li class=\"rise\" style=\"--d:0.36s\">Never paste secrets or production data into prompts.<\/li><\/ul>"}, {"quiz": true, "k": "Quiz 2 / 6 · Loop", "h": "The agent says \"all tests pass\" after a change. What do you do before opening the PR?", "opts": [["Open the PR, CI will check", 0], ["Run typecheck + tests yourself, click through the feature, and read the diff", 1], ["Ask the agent to double-check", 0]], "right": "Evidence beats assertions, including the agent's own.", "wrong": "<b>Verify yourself<\/b>: build, tests, the running UI, and the diff."}, {"k": "Section 2 · Go deeper", "h": "Go deeper", "v": "<div class=\"vwrap\"><a class=\"box rise\" style=\"--d:0.00s;text-decoration:none;display:block\" href=\"https://agents.md/\" target=\"_blank\" rel=\"noopener\"><b>AGENTS.md ↗<\/b><br><small>how to write repo instructions agents follow<\/small><\/a><a class=\"box rise\" style=\"--d:0.15s;text-decoration:none;display:block\" href=\"https://frontendmasters.com/courses/playwright/\" target=\"_blank\" rel=\"noopener\"><b>Frontend Masters: Automated Agent Testing with Playwright ↗<\/b><br><small>using E2E tests as the safety net for agent-written code<\/small><\/a><\/div>", "p": "Optional, but worth it. Tap a card to open it in a new tab."}, {"k": "Tools", "h": "Browser DevTools: the four panels you need", "v": "<div class=\"g2\"><div class=\"box rise\" style=\"--d:0.00s\"><b>Elements<\/b><br><small>live DOM and computed CSS; toggle states like :hover<\/small><\/div><div class=\"box rise\" style=\"--d:0.12s\"><b>Console<\/b><br><small>errors, warnings (React prints most of its hints here)<\/small><\/div><div class=\"box rise ok\" style=\"--d:0.24s\"><b>Network<\/b><br><small>every request: status, payload, timing; filter Fetch/XHR<\/small><\/div><div class=\"box rise \" style=\"--d:0.36s\"><b>Application<\/b><br><small>cookies, localStorage, service workers<\/small><\/div><\/div>", "p": "Before asking an agent \"why is this blank?\", open Network: a 401 or a CORS error answers most of those questions in seconds."}, {"k": "Tools", "h": "React DevTools", "v": "<ol class=\"steps\"><li style=\"--d:0.0s\"><span><b>Components<\/b> tab: select a component, see its props, state and hooks<\/span><\/li><li style=\"--d:0.6s\"><span>Edit props/state live to reproduce a bug without code changes<\/span><\/li><li style=\"--d:1.2s\"><span><b>Highlight updates<\/b> to see what re-renders on each keystroke<\/span><\/li><li style=\"--d:1.8s\"><span><b>Profiler<\/b>: record an interaction; find the slow component by flame chart<\/span><\/li><\/ol>", "an": "The equivalent of attaching a debugger and inspecting objects, but for the component tree."}, {"k": "Git hygiene", "h": "Small, reviewable changes", "v": "<ul class=\"chk\"><li class=\"rise\" style=\"--d:0.00s\">One task per branch and per agent session<\/li><li class=\"rise\" style=\"--d:0.12s\">Commit after each green step, so you can roll back an agent's bad turn<\/li><li class=\"rise\" style=\"--d:0.24s\">Read <code>git diff<\/code> before every commit; unstage unrelated files<\/li><li class=\"rise\" style=\"--d:0.36s\">PR description: what changed, why, how you verified it, screenshots for UI<\/li><li class=\"rise\" style=\"--d:0.48s\">Draft PR early if you want CI feedback before review<\/li><\/ul>"}, {"k": "Section 2 · Tools · Go deeper", "h": "Go deeper", "v": "<div class=\"vwrap\"><a class=\"box rise\" style=\"--d:0.00s;text-decoration:none;display:block\" href=\"https://developer.chrome.com/docs/devtools\" target=\"_blank\" rel=\"noopener\"><b>Chrome DevTools documentation ↗<\/b><br><small>every panel, with walkthroughs<\/small><\/a><a class=\"box rise\" style=\"--d:0.15s;text-decoration:none;display:block\" href=\"https://react.dev/learn/react-developer-tools\" target=\"_blank\" rel=\"noopener\"><b>React docs: React Developer Tools ↗<\/b><br><small>install and use the Components and Profiler tabs<\/small><\/a><\/div>", "p": "Optional, but worth it. Tap a card to open it in a new tab."}, {"sect": 1, "num": "3", "kicker": "Section 3 · Failing CI", "h": "Reading a red pipeline", "p": "CI failures look scary because the logs are long. They are usually one of five things."}, {"k": "Step by step", "h": "Triage in order", "v": "<ol class=\"steps\"><li style=\"--d:0.0s\"><span>Open the <b>first<\/b> failing job and step; later failures are often consequences<\/span><\/li><li style=\"--d:0.6s\"><span>Scroll to the <b>first error<\/b>, not the last line (the last line is usually just \"exit code 1\")<\/span><\/li><li style=\"--d:1.2s\"><span>Classify it: install · lint · typecheck · unit test · build · E2E<\/span><\/li><li style=\"--d:1.8s\"><span>Reproduce locally with the <b>same command<\/b> from the workflow file<\/span><\/li><li style=\"--d:2.4s\"><span>For E2E, download the <b>report/trace artifact<\/b> before re-running anything<\/span><\/li><li style=\"--d:3.0s\"><span>Fix the cause; re-run once. If it passes without a change, you have a flaky test to file<\/span><\/li><\/ol>", "an": "Like reading a Java stack trace: find the first \"Caused by\", not the last frame."}, {"k": "Patterns", "h": "The five usual suspects", "v": "<div class=\"vs\" style=\"grid-template-columns:70px 1fr 1fr\"><div class=\"vl\"><\/div><div class=\"vh data\">looks like<\/div><div class=\"vh code\">usually<\/div><div class=\"vl\" style=\"display:block;align-self:center;word-break:break-word;text-transform:none;letter-spacing:0;font-size:11px;color:#cfd6ea\">install<\/div><div class=\"rise\" style=\"--d:0.0s\"><code>ERESOLVE<\/code>, lockfile mismatch<\/div><div class=\"rise\" style=\"--d:0.0s\">wrong package manager, unpinned version<\/div><div class=\"vl\" style=\"display:block;align-self:center;word-break:break-word;text-transform:none;letter-spacing:0;font-size:11px;color:#cfd6ea\">lint<\/div><div class=\"rise\" style=\"--d:0.2s\">rule names like <code>react-hooks/exhaustive-deps<\/code><\/div><div class=\"rise\" style=\"--d:0.2s\">run <code>lint --fix<\/code>, then read the rest<\/div><div class=\"vl\" style=\"display:block;align-self:center;word-break:break-word;text-transform:none;letter-spacing:0;font-size:11px;color:#cfd6ea\">typecheck<\/div><div class=\"rise\" style=\"--d:0.4s\"><code>TS2322: Type X is not assignable<\/code><\/div><div class=\"rise\" style=\"--d:0.4s\">a real bug, or a missing type update<\/div><div class=\"vl\" style=\"display:block;align-self:center;word-break:break-word;text-transform:none;letter-spacing:0;font-size:11px;color:#cfd6ea\">test<\/div><div class=\"rise\" style=\"--d:0.6s\">expected/received diff<\/div><div class=\"rise\" style=\"--d:0.6s\">behaviour change or brittle test<\/div><div class=\"vl\" style=\"display:block;align-self:center;word-break:break-word;text-transform:none;letter-spacing:0;font-size:11px;color:#cfd6ea\">build/E2E<\/div><div class=\"rise\" style=\"--d:0.8s\">module not found, timeout<\/div><div class=\"rise\" style=\"--d:0.8s\">env var, case-sensitive path, flake<\/div><\/div>"}, {"k": "TypeScript errors", "h": "Reading a TS error top-down", "cmp": [["Bash", "src/features/tasks/TaskList.tsx:42:7 - error TS2322:\n  Type '{ id: number; title: string; }[]' is not assignable to type 'Task[]'.\n    Property 'status' is missing in type '{ id: number; title: string; }'\n    but required in type 'Task'.", "tsc"]], "p": "Read the <b>last indented line first<\/b>: it is the specific reason. Here: the API data lacks <code>status<\/code>. The fix is the data or the type, not a cast."}, {"k": "CI gotchas", "h": "Caveats &amp; gotchas", "v": "<ul class=\"chk\"><li class=\"rise\" style=\"--d:0.00s\">macOS is case-insensitive, Linux CI is not: <code>import Button from './button'<\/code> works locally and fails on CI.<\/li><li class=\"rise\" style=\"--d:0.12s\">Env vars present in your <code>.env.local<\/code> but not in CI secrets: build-time vars are baked in.<\/li><li class=\"rise\" style=\"--d:0.24s\">Caches: a poisoned dependency cache can need a manual clear; re-running alone will not fix it.<\/li><li class=\"rise\" style=\"--d:0.36s\">Timezone and locale differ on CI; date formatting tests should pin them.<\/li><\/ul>"}, {"quiz": true, "k": "Quiz 3 / 6 · CI", "h": "The job log ends with <code>Error: Process completed with exit code 1.<\/code> Where is the useful information?", "opts": [["That line; it is the error", 0], ["Earlier: the first error output of the failing step", 1], ["Only in the artifact", 0]], "right": "Exit code 1 is the summary. The cause is above it.", "wrong": "Scroll <b>up<\/b> to the first error in the failing step."}, {"k": "Section 3 · Go deeper", "h": "Go deeper", "v": "<div class=\"vwrap\"><a class=\"box rise\" style=\"--d:0.00s;text-decoration:none;display:block\" href=\"https://docs.github.com/en/actions/how-tos/monitor-workflows/use-workflow-run-logs\" target=\"_blank\" rel=\"noopener\"><b>GitHub Docs: Using workflow run logs ↗<\/b><br><small>navigating, searching and downloading logs<\/small><\/a><a class=\"box rise\" style=\"--d:0.15s;text-decoration:none;display:block\" href=\"https://www.typescriptlang.org/docs/handbook/2/narrowing.html\" target=\"_blank\" rel=\"noopener\"><b>TypeScript Handbook: Narrowing ↗<\/b><br><small>the right fix for most \"not assignable\" errors<\/small><\/a><\/div>", "p": "Optional, but worth it. Tap a card to open it in a new tab."}, {"sect": 1, "num": "4", "kicker": "Section 4 · Reviewing agent code", "h": "A review checklist for React/TS", "p": "What to look for in a diff you did not write, ordered by how often it matters."}, {"k": "Checklist", "h": "1 · Correctness and states", "v": "<ul class=\"chk\"><li class=\"rise\" style=\"--d:0.00s\">Every async UI has <b>loading, empty, error and success<\/b> states, and each is reachable<\/li><li class=\"rise\" style=\"--d:0.12s\">Effects have <b>cleanups<\/b> (abort fetches, clear timers, remove listeners)<\/li><li class=\"rise\" style=\"--d:0.24s\">No <b>stale closures<\/b>: state updates that depend on previous state use the updater form<\/li><li class=\"rise\" style=\"--d:0.36s\">Lists use <b>stable keys<\/b> (ids, never array index for reorderable data)<\/li><li class=\"rise\" style=\"--d:0.48s\">Forms prevent double submit and keep user input on failure<\/li><\/ul>"}, {"k": "Checklist", "h": "2 · TypeScript honesty", "v": "<ul class=\"chk\"><li class=\"rise\" style=\"--d:0.00s\">No <code>any<\/code>, <code>as<\/code> casts or <code>!<\/code> non-null assertions without a reason in a comment<\/li><li class=\"rise\" style=\"--d:0.12s\">External data (API, <code>postMessage<\/code>, <code>localStorage<\/code>) is <b>validated at runtime<\/b> before it is trusted<\/li><li class=\"rise\" style=\"--d:0.24s\">Discriminated unions for state (<code>status: 'idle' | 'loading' | ...<\/code>) instead of several booleans<\/li><li class=\"rise\" style=\"--d:0.36s\">Types updated at the source, not patched at each use<\/li><\/ul>"}, {"k": "Checklist", "h": "3 · React idioms", "v": "<ul class=\"chk\"><li class=\"rise\" style=\"--d:0.00s\"><b>Derived values computed during render<\/b>, not mirrored into state with an effect<\/li><li class=\"rise\" style=\"--d:0.12s\">No <code>useEffect<\/code> for things that are events (click → request belongs in the handler)<\/li><li class=\"rise\" style=\"--d:0.24s\">Server state via the repo's data library (e.g. TanStack Query), not hand-rolled <code>useEffect<\/code> + <code>fetch<\/code><\/li><li class=\"rise\" style=\"--d:0.36s\">Memoization (<code>useMemo<\/code>, <code>useCallback<\/code>, <code>memo<\/code>) only with a reason<\/li><li class=\"rise\" style=\"--d:0.48s\">Components use the design system instead of new one-off styled elements<\/li><\/ul>"}, {"k": "Checklist", "h": "4 · Accessibility, security, tests", "v": "<ul class=\"chk\"><li class=\"rise\" style=\"--d:0.00s\">Interactive elements are real <code>button<\/code>/<code>a<\/code>/<code>input<\/code>; images have <code>alt<\/code>; fields have labels<\/li><li class=\"rise\" style=\"--d:0.12s\">No <code>dangerouslySetInnerHTML<\/code> without sanitizing; links from data are scheme-checked<\/li><li class=\"rise\" style=\"--d:0.24s\">No secrets or tokens in client code, URLs or logs<\/li><li class=\"rise\" style=\"--d:0.36s\">Tests query by role, cover the states above, and <b>fail when the feature is reverted<\/b><\/li><li class=\"rise\" style=\"--d:0.48s\">No unrelated changes: formatting churn, lockfile edits, renamed files<\/li><\/ul>"}, {"k": "Example", "h": "Spot the issues", "cmp": [["TSX", "function TaskBadge({ taskId }: { taskId: string }) {\n  const [task, setTask] = useState<any>(null);\n  const [label, setLabel] = useState('');\n  useEffect(() => {\n    fetch(`/api/tasks/${taskId}`).then(r => r.json()).then(setTask);\n  }, []);\n  useEffect(() => {\n    setLabel(task?.status === 'done' ? 'Done' : 'Open');\n  }, [task]);\n  return <div onClick={() => open(task.id)}>{label}<\/div>;\n}", "agent output"]], "p": "Find at least five before the next card."}, {"k": "Example", "h": "What a reviewer flags", "v": "<div class=\"vwrap\"><div class=\"box warn rise\" style=\"--d:0.00s\">✗ <code>useState&lt;any&gt;<\/code><br><small style=\"color:#3ddc97\">✓ a <code>Task<\/code> type and a validated response<\/small><\/div><div class=\"box warn rise\" style=\"--d:0.15s\">✗ <code>[]<\/code> deps while using <code>taskId<\/code><br><small style=\"color:#3ddc97\">✓ include <code>taskId<\/code>; better, use the data-fetching hook<\/small><\/div><div class=\"box warn rise\" style=\"--d:0.30s\">✗ No abort, no error or loading state<br><small style=\"color:#3ddc97\">✓ query library or AbortController + states<\/small><\/div><div class=\"box warn rise\" style=\"--d:0.45s\">✗ <code>label<\/code> mirrored into state via an effect<br><small style=\"color:#3ddc97\">✓ derive it during render: <code>const label = ...<\/code><\/small><\/div><div class=\"box warn rise\" style=\"--d:0.60s\">✗ Clickable <code>div<\/code><br><small style=\"color:#3ddc97\">✓ a <code>button<\/code> (keyboard + screen reader)<\/small><\/div><div class=\"box warn rise\" style=\"--d:0.75s\">✗ <code>task.id<\/code> when <code>task<\/code> may be null<br><small style=\"color:#3ddc97\">✓ guard, or render nothing until loaded<\/small><\/div><\/div>"}, {"k": "Review", "h": "How to leave useful review comments", "v": "<div class=\"g2\"><div class=\"box rise ok\" style=\"--d:0.00s\"><b>Be specific<\/b><br><small>\"this effect is missing <code>taskId<\/code> in deps; switching tasks shows stale data\"<\/small><\/div><div class=\"box rise \" style=\"--d:0.12s\"><b>Say why<\/b><br><small>link the rule or doc, not just \"wrong\"<\/small><\/div><div class=\"box rise \" style=\"--d:0.24s\"><b>Label severity<\/b><br><small>blocking vs nit vs question<\/small><\/div><div class=\"box rise ok\" style=\"--d:0.36s\"><b>Ask for evidence<\/b><br><small>\"can you add a test for the error state?\"<\/small><\/div><\/div>", "an": "Same as reviewing a junior engineer's PR in any stack: kind, specific, and focused on behaviour."}, {"k": "Review · AI", "h": "What AI often gets wrong", "v": "<div class=\"vwrap\"><div class=\"box warn rise\" style=\"--d:0.00s\">✗ Adds <code>useEffect<\/code> to sync props into state<br><small style=\"color:#3ddc97\">✓ derive, or key the component to reset<\/small><\/div><div class=\"box warn rise\" style=\"--d:0.15s\">✗ Over-memoizes everything \"for performance\"<br><small style=\"color:#3ddc97\">✓ measure first; memo only hot paths<\/small><\/div><div class=\"box warn rise\" style=\"--d:0.30s\">✗ Invents props or hooks that do not exist in the library<br><small style=\"color:#3ddc97\">✓ typecheck + go-to-definition<\/small><\/div><div class=\"box warn rise\" style=\"--d:0.45s\">✗ Huge PR mixing refactor and feature<br><small style=\"color:#3ddc97\">✓ ask for separate, small PRs<\/small><\/div><\/div>"}, {"quiz": true, "k": "Quiz 4 / 6 · Review", "h": "An effect sets <code>fullName<\/code> state from <code>first<\/code> and <code>last<\/code> props. Best review comment?", "opts": [["Add <code>first<\/code> and <code>last<\/code> to the dependency array", 0], ["Compute <code>fullName<\/code> during render; no state or effect needed", 1], ["Wrap it in <code>useMemo<\/code>", 0]], "right": "Derived data does not belong in state. React docs: \"You Might Not Need an Effect\".", "wrong": "<b>Derive it during render<\/b>. The effect adds an extra render and a sync bug."}, {"quiz": true, "k": "Quiz 5 / 6 · Review", "h": "Which agent-written change most needs a blocking comment?", "opts": [["A <code>useCallback<\/code> that might not be necessary", 0], ["<code>const data = (await res.json()) as Task[]<\/code> from an external API with no validation", 1], ["A component file over 150 lines", 0]], "right": "Unvalidated external data with a cast hides real runtime failures. The others are nits.", "wrong": "The <b>unvalidated cast<\/b> is the correctness risk; the rest are style."}, {"quiz": true, "k": "Quiz 6 / 6 · Review", "h": "A generated test passes. How do you know it is worth keeping?", "opts": [["It has high coverage", 0], ["Revert the feature code and confirm the test fails for the right reason", 1], ["It uses snapshots", 0]], "right": "A test you have never seen fail proves nothing.", "wrong": "<b>Make it fail<\/b>: revert or break the code and watch it go red."}, {"k": "Section 4 · Go deeper", "h": "Go deeper", "v": "<div class=\"vwrap\"><a class=\"box rise\" style=\"--d:0.00s;text-decoration:none;display:block\" href=\"https://react.dev/learn/you-might-not-need-an-effect\" target=\"_blank\" rel=\"noopener\"><b>React docs: You Might Not Need an Effect ↗<\/b><br><small>the most common issue in generated React code<\/small><\/a><a class=\"box rise\" style=\"--d:0.15s;text-decoration:none;display:block\" href=\"https://react.dev/reference/rules\" target=\"_blank\" rel=\"noopener\"><b>React docs: Rules of React ↗<\/b><br><small>what idiomatic React must never break<\/small><\/a><a class=\"box rise\" style=\"--d:0.30s;text-decoration:none;display:block\" href=\"https://google.github.io/eng-practices/review/reviewer/\" target=\"_blank\" rel=\"noopener\"><b>Google Engineering Practices: How to do a code review ↗<\/b><br><small>what to look for and how to comment<\/small><\/a><\/div>", "p": "Optional, but worth it. Tap a card to open it in a new tab."}, {"recap": true, "h": "Day one on one card", "items": ["<b>Pin everything<\/b>: Node via a version manager, package manager via Corepack, frozen lockfile installs.", "<b>Daily loop<\/b>: frame with acceptance criteria → plan → small steps → run it → review the diff → small PR.", "<b>Red CI<\/b>: first failing step, first error, classify, reproduce with the same command, read the trace.", "<b>Review checklist<\/b>: states and cleanups, honest types, React idioms, accessibility and security, tests that can fail.", "Agents are fast and confident; <b>evidence<\/b> (types, tests, the running app) is your job."], "next": "That is the course. Go back to the home page to revisit any part."}];
+</script>
+<script>(function(){
+  "use strict";
+  var KW='const|let|var|function|return|if|else|async|await|new|class|interface|type|import|export|default|from|def|end|public|private|static|final|void|try|catch|throw|typeof|record|enum|module|for|of|in|null|undefined|true|false|this|self|nil|package|implements|extends|describe|it|test|expect|before|beforeEach|afterEach|require|do';
+  var RE=new RegExp('(\\/\\/[^\\n]*|#(?!\\{)[^\\n]*)|("[^"\\n]*"|\'[^\'\\n]*\'|`[^`]*`)|\\b('+KW+')\\b','g');
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function hl(src){ var out='',last=0,m; RE.lastIndex=0;
+    while((m=RE.exec(src))){ out+=esc(src.slice(last,m.index)); out+= m[1]?'<span class="c">'+esc(m[1])+'</span>': m[2]?'<span class="s">'+esc(m[2])+'</span>':'<span class="k">'+m[3]+'</span>'; last=RE.lastIndex; }
+    return out+esc(src.slice(last)); }
+  var LC={JS:['#2a2510','#f7d046'],TS:['#13243a','#4ea8ff'],JSX:['#102a2a','#4ee6e0'],TSX:['#102a2a','#4ee6e0'],Java:['#2a1a14','#ff7a45'],JUnit:['#2a1a14','#ff7a45'],Ruby:['#3a1624','#ff5c8a'],RSpec:['#3a1624','#ff5c8a'],Bash:['#1a2a1a','#3ddc97'],Rails:['#3a1624','#ff5c8a'],JSON:['#22183a','#a78bfa']};
+  var stage=document.getElementById('stage'), anchor=document.getElementById('bottomBar');
+  CARDS.forEach(function(c){
+    var s=document.createElement('section'); s.className='card'; var h='';
+    if(c.sect){ s.className+=' sect';
+      h='<div class="visual"><div class="num pop">'+c.num+'</div></div>'+(c.badge?'<div class="titlebadge"><i></i>'+c.badge+'</div>':'')+'<div class="kicker">'+c.kicker+'</div><h1>'+c.h+'</h1><p>'+c.p+'</p>'+(c.first?'<div class="tapme">Tap the right side or swipe left →</div>':'');
+    } else if(c.quiz){ s.className+=' quiz'; s.setAttribute('data-quiz','');
+      h='<div class="kicker">'+c.k+'</div><h2>'+c.h+'</h2>'+(c.code?'<div class="qcode">'+hl(c.code)+'</div>':'<div style="height:10px"></div>')+'<div class="opts">'+c.opts.map(function(o,i){return '<button class="opt" type="button" data-ok="'+o[1]+'"><span class="l">'+'ABCD'[i]+'</span>'+o[0]+'</button>';}).join('')+'</div><div class="fb"></div>';
+    } else if(c.recap){
+      h='<div class="kicker">Recap</div><h2>'+c.h+'</h2><ul class="take">'+
+        c.items.map(function(t,i){return '<li class="rise" style="--d:'+(i*0.15)+'s">'+t+'</li>';}).join('')+
+        '</ul><div class="score" id="score"></div><p style="font-size:13px;margin-top:8px">'+c.next+'</p><a class="btn ghost" href="index.html" style="margin-top:6px">← Course home</a>';
+    } else {
+      var inner='';
+      if(c.cmp){ inner='<div class="stack">'+c.cmp.map(function(b,i){ var col=LC[b[0]]||LC.JS; return '<div class="cb rise" style="--d:'+(i*0.25)+'s"><div class="cb-h">'+(b[2]||(i===0?'modern':'compare'))+' <span class="tagc" style="background:'+col[0]+';color:'+col[1]+'">'+b[0]+'</span></div><pre>'+hl(b[1])+'</pre></div>'; }).join('')+'</div>'; }
+      if(c.v){ inner=c.v+inner; }
+      if(c.lab){ s.className+=' lab'; inner='<div class="scrollv demo">'+inner+'</div>'; }
+      h='<div class="kicker">'+c.k+'</div><div class="visual">'+inner+'</div><h2>'+c.h+'</h2>'+(c.p?'<p>'+c.p+'</p>':'')+(c.an?'<div class="analogy"><span>'+c.an+'</span></div>':'');
+    }
+    s.innerHTML=h; if(c.quiz){ var fb=s.querySelector('.fb'); fb.setAttribute('data-right',c.right); fb.setAttribute('data-wrong',c.wrong); }
+    stage.insertBefore(s, anchor);
+  });
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id);};
+  var stage=$('stage'), cards=[].slice.call(document.querySelectorAll('.card')), segsEl=$('segs'), countEl=$('count'), prevBtn=$('prev'), nextBtn=$('next');
+  var cur=0, N=cards.length, answered=0, correct=0, NQ=document.querySelectorAll('[data-quiz]').length;
+  cards.forEach(function(){ var s=document.createElement('div'); s.className='seg'; s.appendChild(document.createElement('i')); segsEl.appendChild(s); });
+  var segs=segsEl.children;
+  function go(n){
+    n=Math.max(0,Math.min(N-1,n));
+    cards.forEach(function(c,k){ c.classList.toggle('past',k<n); if(k!==n) c.classList.remove('active'); c.setAttribute('aria-hidden',k!==n); });
+    var card=cards[n]; card.classList.remove('active'); void card.offsetWidth; card.classList.add('active');
+    for(var k=0;k<N;k++) segs[k].classList.toggle('done',k<=n);
+    countEl.textContent=(n+1)+' / '+N; prevBtn.disabled=n===0; nextBtn.disabled=n===N-1; cur=n; try{var _k='lp:'+location.pathname.split('/').pop(),_o=JSON.parse(localStorage.getItem(_k)||'{}');localStorage.setItem(_k,JSON.stringify({max:Math.max(_o.max||0,n+1),total:N}));}catch(_e){} updateScore();
+    try{ history.replaceState(null,'','#'+(n+1)); }catch(e){}
+  }
+  function next(){ if(cur<N-1) go(cur+1); } function prev(){ if(cur>0) go(cur-1); }
+  prevBtn.addEventListener('click',function(e){e.stopPropagation();prev();});
+  nextBtn.addEventListener('click',function(e){e.stopPropagation();next();});
+  
+  var lastSwipe=0;
+  stage.addEventListener('click',function(e){
+    if(Date.now()-lastSwipe<450) return;
+    if(e.target.closest('button, a, .opts, .demo, textarea, iframe')) return;
+    var r=stage.getBoundingClientRect(); if((e.clientX-r.left)/r.width<0.3) prev(); else next();
+  });
+  var sx=0,sy=0,tr=false;
+  stage.addEventListener('touchstart',function(e){ if(e.target.closest('textarea')) return; var t=e.touches[0]; sx=t.clientX; sy=t.clientY; tr=true; },{passive:true});
+  stage.addEventListener('touchend',function(e){ if(!tr) return; tr=false; var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.2){ lastSwipe=Date.now(); if(dx<0) next(); else prev(); } },{passive:true});
+  document.addEventListener('keydown',function(e){
+    if(e.target.tagName==='TEXTAREA') return;
+    if(e.target.closest&&e.target.closest('button')&&(e.key===' '||e.key==='Enter')) return;
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key==='Home') go(0); else if(e.key==='End') go(N-1);
+  });
+  [].forEach.call(document.querySelectorAll('[data-quiz]'),function(q){
+    var opts=q.querySelector('.opts'), fb=q.querySelector('.fb');
+    [].forEach.call(opts.querySelectorAll('.opt'),function(b){
+      b.addEventListener('click',function(e){
+        e.stopPropagation(); if(opts.classList.contains('done')) return;
+        opts.classList.add('done'); answered++;
+        var ok=b.getAttribute('data-ok')==='1'; if(ok) correct++; else b.classList.add('wrong');
+        opts.querySelector('[data-ok="1"]').classList.add('right');
+        fb.innerHTML='<span class="tag" style="color:'+(ok?'var(--green)':'var(--pink)')+'">'+(ok?'✓ Correct.':'✗ Not quite.')+'</span> '+fb.getAttribute(ok?'data-right':'data-wrong')+'<br><span style="color:var(--dim);font-size:12px">Tap or swipe to continue →</span>';
+        fb.classList.add('show');
+      });
+    });
+  });
+  function updateScore(){ var s=$('score'); s.textContent=answered?('Quiz score: '+correct+' / '+NQ+(answered<NQ?' ('+(NQ-answered)+' skipped)':'')):''; }
+
+  var start=parseInt((location.hash||'').slice(1),10); go(isNaN(start)?0:start-1);
+})();
+</script>
